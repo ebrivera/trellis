@@ -1,7 +1,7 @@
-import { ReactNode } from 'react'
+import { ReactNode, HTMLAttributes } from 'react'
 import { cn } from '../../lib/utils'
 
-interface CardProps {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
     children: ReactNode
     className?: string
     padding?: 'none' | 'sm' | 'md' | 'lg'
@@ -37,6 +37,7 @@ export function Card({
     padding = 'md',
     rounded = '3xl',
     variant = 'glass',
+    ...props
 }: CardProps) {
     return (
         <div
@@ -46,6 +47,7 @@ export function Card({
                 variantMap[variant],
                 className
             )}
+            {...props}
         >
         {children}
         </div>

@@ -18,9 +18,9 @@ export default function Navbar() {
 
                         {/* Nav Items - Desktop */}
                         <div className="items-center justify-center flex-1 hidden gap-1 md:flex sm:gap-2">
-                            <NavLink href="/">dashboard.</NavLink>
-                            <NavLink href="/goals">goals.</NavLink>
-                            <NavLink href="/approvals">approvals.</NavLink>
+                            <NavLink href="/">Dashboard</NavLink>
+                            <NavLink href="/plan">Plan</NavLink>
+                            <NavLink href="/approvals">Approvals</NavLink>
                         </div>
 
                         <div className="flex items-center gap-3">

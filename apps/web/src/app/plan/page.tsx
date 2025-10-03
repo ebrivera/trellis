@@ -5,6 +5,8 @@ import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { ChatMessage } from '../../components/ui/ChatMessage'
 import { PlanCard } from '../../components/ui/PlanCard'
+import { CheckCircle, Edit, X, FolderTree, Scale, Mail, MessageCircle } from 'lucide-react'
+import { ReactNode } from 'react'
 
 type Message = {
     id: string
@@ -17,7 +19,7 @@ type Message = {
 type PlanPreview = {
     title: string
     items: Array<{
-        icon: string
+        icon: ReactNode
         title: string
         description: string
     }>
@@ -71,22 +73,22 @@ export default function GoalsPage() {
             title: 'Fall Small Groups Plan',
             items: [
                 {
-                    icon: '📋',
+                    icon: <FolderTree className="w-6 h-6 text-blue-400" />,
                     title: 'Create groups by ZIP code',
                     description: '8 groups will be formed based on geographic distribution',
                 },
                 {
-                    icon: '⚖️',
+                    icon: <Scale className="w-6 h-6 text-purple-400" />,
                     title: 'Balance group capacity',
                     description: 'Members will be distributed evenly (20-30 per group)',
                 },
                 {
-                    icon: '✉️',
+                    icon: <Mail className="w-6 h-6 text-green-400" />,
                     title: 'Draft leader messages',
                     description: 'Personalized messages prepared for 8 group leaders',
                 },
                 {
-                    icon: '💬',
+                    icon: <MessageCircle className="w-6 h-6 text-pink-400" />,
                     title: 'Draft member messages',
                     description: 'Welcome messages prepared for 245 members',
                 },
@@ -109,15 +111,15 @@ export default function GoalsPage() {
     }, 1500)
     }
 
-    const handleApprove = () => {
-        const approvalMessage: Message = {
-            id: Date.now().toString(),
-            role: 'system',
-            content: '✅ Plan approved! Your plan has been moved to the Approvals queue. You can review it on the Approvals page.',
-        }
-        setMessages((prev) => [...prev, approvalMessage])
-        setCurrentPlan(null)
-    }
+     const handleApprove = () => {
+         const approvalMessage: Message = {
+             id: Date.now().toString(),
+             role: 'system',
+             content: 'Plan approved! Your plan has been moved to the Approvals queue. You can review it on the Approvals page.',
+         }
+         setMessages((prev) => [...prev, approvalMessage])
+         setCurrentPlan(null)
+     }
 
     const handleRevise = () => {
         const reviseMessage: Message = {
@@ -220,19 +222,22 @@ export default function GoalsPage() {
                                     ))}
                                 </div>
 
-                                {message.showActions && (
-                                    <div className="flex flex-wrap gap-3 pt-4">
-                                        <Button onClick={handleApprove} size="lg">
-                                            ✅ Approve & Continue
-                                        </Button>
-                                        <Button onClick={handleRevise} variant="outline" size="lg">
-                                            ✏️ Revise Plan
-                                        </Button>
-                                        <Button onClick={handleCancel} variant="ghost" size="lg">
-                                            ❌ Cancel
-                                        </Button>
-                                    </div>
-                                )}
+                                 {message.showActions && (
+                                     <div className="flex flex-wrap gap-3 pt-4">
+                                         <Button onClick={handleApprove} size="lg">
+                                             <CheckCircle className="inline-block w-5 h-5 mr-2" />
+                                             Approve & Continue
+                                         </Button>
+                                         <Button onClick={handleRevise} variant="outline" size="lg">
+                                             <Edit className="inline-block w-5 h-5 mr-2" />
+                                             Revise Plan
+                                         </Button>
+                                         <Button onClick={handleCancel} variant="ghost" size="lg">
+                                             <X className="inline-block w-5 h-5 mr-2" />
+                                             Cancel
+                                         </Button>
+                                     </div>
+                                 )}
                             </Card>
                         </div>
                         )}
