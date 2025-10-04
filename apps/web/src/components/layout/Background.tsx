@@ -200,7 +200,7 @@ export const Plasma: React.FC<PlasmaProps> = ({
     };
     }, [color, speed, direction, scale, opacity, mouseInteractive]);
 
-    return <div ref={containerRef} className="fixed inset-0 -z-10" />;
+    return <div ref={containerRef} className="fixed inset-0 -z-10" style={{ colorScheme: 'dark' }} />;
 };
 
 export default Plasma;
