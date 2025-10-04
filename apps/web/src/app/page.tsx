@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
-import { Clock, BarChart3, MessageSquare, Users, Plus, CheckCircle2, Download, Target } from 'lucide-react'
+import { Clock, BarChart3, MessageSquare, Users, Plus, CheckCircle2, Download, Target, Upload } from 'lucide-react'
 
 export default function Dashboard() {
   return (
@@ -15,7 +15,7 @@ export default function Dashboard() {
           <p className="mb-6 text-lg text-white/70">
             Turn your data into ministry outcomes, safely and simply.
           </p>
-          <Link href="/goals">
+          <Link href="/plan">
             <Button size="lg" className="shadow-xl">
               <Plus className="inline-block w-5 h-5 mr-2" />
               Start New Goal
@@ -146,6 +146,35 @@ export default function Dashboard() {
               time="3 days ago"
             />
           </Card>
+        </section>
+
+        {/* Quick Actions */}
+        <section className="mb-12">
+          <h2 className="mb-6 text-2xl font-semibold text-white">Quick Actions</h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Link href="/settings" className="block">
+              <Button variant="outline" size="lg" className="w-full justify-center">
+                <Upload className="inline-block w-5 h-5 mr-2" />
+                Import Data
+              </Button>
+            </Link>
+            <Link href="/plan" className="block">
+              <Button variant="outline" size="lg" className="w-full justify-center">
+                <Plus className="inline-block w-5 h-5 mr-2" />
+                Start New Goal
+              </Button>
+            </Link>
+            <Link href="/approvals" className="block">
+              <Button variant="outline" size="lg" className="w-full justify-center">
+                <CheckCircle2 className="inline-block w-5 h-5 mr-2" />
+                Review Approvals
+              </Button>
+            </Link>
+            <Button variant="outline" size="lg" className="justify-center">
+              <BarChart3 className="inline-block w-5 h-5 mr-2" />
+              View Reports
+            </Button>
+          </div>
         </section>
 
         {/* Metrics Snapshot */}

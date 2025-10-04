@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
+import { ProfileDropdown } from './ProfileDropdown'
+import { User, Settings, LogOut } from 'lucide-react'
 
 export default function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -41,38 +43,55 @@ export default function Navbar() {
                                 )}
                             </button>
 
-                            {/* Profile */}
-                            <button className="flex items-center justify-center w-10 h-10 font-medium text-white transition-transform rounded-full shrink-0 hover:scale-105">
-                                <svg
-                                    className="w-6 h-6"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                    />
-                                </svg>
-                            </button>
+                            {/* Profile - Desktop Only */}
+                            <div className="hidden md:block">
+                                <ProfileDropdown />
+                            </div>
                         </div>
                     </div>
 
                     {/* Mobile Menu Dropdown */}
                     {mobileMenuOpen && (
                         <div className="border-t md:hidden border-white/20">
-                            <div className="flex flex-col gap-1 p-4">
-                                <MobileNavLink href="/" onClick={() => setMobileMenuOpen(false)}>
-                                    dashboard.
-                                </MobileNavLink>
-                                <MobileNavLink href="/goals" onClick={() => setMobileMenuOpen(false)}>
-                                    goals.
-                                </MobileNavLink>
-                                <MobileNavLink href="/approvals" onClick={() => setMobileMenuOpen(false)}>
-                                    approvals.
-                                </MobileNavLink>
+                            <div className="flex flex-col p-4 space-y-4">
+                                {/* Navigation Links */}
+                                <div className="flex flex-col gap-1">
+                                    <MobileNavLink href="/" onClick={() => setMobileMenuOpen(false)}>
+                                        Dashboard
+                                    </MobileNavLink>
+                                    <MobileNavLink href="/plan" onClick={() => setMobileMenuOpen(false)}>
+                                        Plan
+                                    </MobileNavLink>
+                                    <MobileNavLink href="/approvals" onClick={() => setMobileMenuOpen(false)}>
+                                        Approvals
+                                    </MobileNavLink>
+                                </div>
+
+                                {/* Profile Section */}
+                                <div className="pt-3 border-t border-white/20">
+                                    <div className="px-4 py-2 mb-2">
+                                        <p className="font-semibold text-white">Pastor John</p>
+                                        <p className="text-sm text-white/60">john@church.org</p>
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <MobileNavLink href="/profile" onClick={() => setMobileMenuOpen(false)}>
+                                            <User className="inline-block w-4 h-4 mr-2" />
+                                            Profile
+                                        </MobileNavLink>
+                                        <MobileNavLink href="/settings" onClick={() => setMobileMenuOpen(false)}>
+                                            <Settings className="inline-block w-4 h-4 mr-2" />
+                                            Settings
+                                        </MobileNavLink>
+                                        <MobileNavLink 
+                                            href="/" 
+                                            onClick={() => setMobileMenuOpen(false)}
+                                            className="text-red-400"
+                                        >
+                                            <LogOut className="inline-block w-4 h-4 mr-2" />
+                                            Log Out
+                                        </MobileNavLink>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -96,17 +115,19 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
 function MobileNavLink({ 
     href, 
     children, 
-    onClick 
+    onClick,
+    className = ''
 }: { 
     href: string
     children: React.ReactNode
-    onClick: () => void 
+    onClick: () => void
+    className?: string
 }) {
     return (
         <Link
             href={href}
             onClick={onClick}
-            className="px-4 py-3 text-base font-medium text-white transition-colors rounded-lg hover:bg-white/10"
+            className={`px-4 py-3 text-base font-medium text-white transition-colors rounded-lg hover:bg-white/10 ${className}`}
         >
             {children}
         </Link>
