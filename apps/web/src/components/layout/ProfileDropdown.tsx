@@ -46,7 +46,7 @@ export function ProfileDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-[-1rem] z-[60] mt-4 overflow-hidden border shadow-2xl w-60 rounded-2xl bg-black/50 backdrop-blur-xl border-white/20 shadow-black/10">
+        <div className="absolute right-0 z-[60] mt-6 overflow-hidden border shadow-2xl w-60 rounded-2xl bg-black/50 backdrop-blur-xl border-white/20 shadow-black/10">
           {/* User Info */}
           <div className="px-4 py-3 border-b border-white/20">
             <p className="font-semibold text-white">Pastor John</p>
