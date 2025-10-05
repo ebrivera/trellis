@@ -13,6 +13,12 @@ dist/
 build/
 *.tsbuildinfo
 
+# orchestration files
+/orchestrator/venv
+/orchestrator/__pycache__/
+/orchestrator/.pytest_cache/
+/orchestrator/.mypy_cache/
+
 # Environment variables
 .env
 .env.local
