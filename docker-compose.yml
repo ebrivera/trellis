@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  web:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules_cache:/app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:4000
+      DATABASE_URL: postgres://trellis:trellis@db:5432/trellis
+    command: >
+      sh -c "npm install && npm run dev --workspace=@trellis/web -- --hostname 0.0.0.0 --port 3000"
+    depends_on:
+      api:
+        condition: service_started
+      db:
+        condition: service_healthy
+
+  api:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules_cache:/app/node_modules
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgres://trellis:trellis@db:5432/trellis
+    command: >
+      sh -c "npm install && npm run dev --workspace=@trellis/api"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: trellis
+      POSTGRES_USER: trellis
+      POSTGRES_PASSWORD: trellis
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trellis"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  node_modules_cache:
+  postgres_data:

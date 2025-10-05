@@ -7,6 +7,7 @@ A modern monorepo with Next.js, Tailwind CSS, and TypeScript.
 ```
 trellis/
 ├── apps/
+│   ├── api/                 # Express API skeleton
 │   └── web/                 # Next.js application
 ├── packages/
 │   ├── ui/                  # Shared UI components
@@ -25,7 +26,7 @@ trellis/
    npm install
    ```
 
-2. Start development server:
+2. Start development servers:
 
    ```bash
    npm run dev
@@ -46,6 +47,10 @@ trellis/
 - `npm run format` - Format code with Prettier
 
 ## Packages
+
+### @trellis/api
+
+Express-based API service that exposes the orchestrator endpoints.
 
 ### @trellis/web
 
@@ -73,6 +78,29 @@ This monorepo uses:
 - **Tailwind CSS** for styling
 - **Prettier** for code formatting
 - **ESLint** for code linting
+
+## Docker Compose
+
+1. Copy the example environment files and adjust as needed:
+
+   ```bash
+   cp apps/api/.env.example apps/api/.env
+   cp apps/web/.env.example apps/web/.env.local
+   ```
+
+2. Start the full stack (Postgres, API, and Next.js):
+
+   ```bash
+   docker compose up
+   ```
+
+   The API listens on `http://localhost:4000` and the web app on `http://localhost:3000`.
+
+3. Stop and remove containers:
+
+   ```bash
+   docker compose down
+   ```
 
 ## Adding New Packages
 
