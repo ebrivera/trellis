@@ -56,7 +56,7 @@ export default function ResultsPage() {
             onClick={() => router.push('/')}
             className="mb-4"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="inline-block w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
 
@@ -118,11 +118,11 @@ export default function ResultsPage() {
         {/* Actions */}
         <section className="flex flex-wrap gap-3">
           <Button size="lg">
-            <Download className="w-5 h-5 mr-2" />
+            <Download className="inline-block w-5 h-5 mr-2" />
             Export Report
           </Button>
           <Button variant="outline" size="lg" onClick={() => router.push('/approvals')}>
-            <List className="w-5 h-5 mr-2" />
+            <List className="inline-block w-5 h-5 mr-2" />
             View Approvals
           </Button>
           <Button variant="outline" size="lg" onClick={() => router.push('/plan')}>

@@ -323,7 +323,7 @@ export default function GoalsPage() {
                                         {message.approvalPreview.template === 'monitoring' && <Clock className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />}
                                         {message.approvalPreview.template === 'analysis' && <TrendingUp className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />}
                                         <div className="flex-1">
-                                            <p className="text-sm text-white/80 mb-2">
+                                            <p className="mb-2 text-sm text-white/80">
                                                 {message.approvalPreview.template === 'matching' && `${(message.approvalPreview.preview as MatchingPreview).assignments.length} proposed assignments from ${message.approvalPreview.params.sourceFile}${message.approvalPreview.params.targetFile ? ` to ${message.approvalPreview.params.targetFile}` : ''}`}
                                                 {message.approvalPreview.template === 'monitoring' && `${(message.approvalPreview.preview as MonitoringPreview).flaggedItems.length} items flagged: ${(message.approvalPreview.preview as MonitoringPreview).condition}`}
                                                 {message.approvalPreview.template === 'analysis' && `Analysis of ${(message.approvalPreview.preview as AnalysisPreview).totalAnalyzed} records with ${(message.approvalPreview.preview as AnalysisPreview).lapsedItems.length} items requiring attention`}
