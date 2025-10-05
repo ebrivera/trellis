@@ -18,21 +18,43 @@ trellis/
 └── tsconfig.json           # Root TypeScript configuration
 ```
 
-## Getting Started
+## Getting Started (no Docker)
 
-1. Install dependencies:
+1. Install JavaScript dependencies:
 
    ```bash
    npm install
    ```
 
-2. Start development servers:
+2. Install API dependencies:
+
+   ```bash
+   pip install -r apps/api/requirements.txt
+   ```
+
+3. Copy environment templates and add your Supabase project settings:
+
+   ```bash
+   cp apps/api/.env.example apps/api/.env
+   cp apps/web/.env.example apps/web/.env.local
+   ```
+
+   Set `DATABASE_URL`, `SUPABASE_URL`, and the Supabase keys to match your project. The API reads the service role key; the web app uses the anon key.
+
+4. Run the API (terminal 1):
+
+   ```bash
+   cd apps/api
+   uvicorn app.main:app --reload --host 0.0.0.0 --port 4000
+   ```
+
+5. Run the web app (terminal 2):
 
    ```bash
    npm run dev
    ```
 
-3. Build all packages:
+6. Build all packages (optional):
    ```bash
    npm run build
    ```
@@ -87,16 +109,12 @@ This monorepo uses:
 - **Prettier** for code formatting
 - **ESLint** for code linting
 
-## Docker Compose
+## Docker Compose (optional reference)
 
-1. Copy the example environment files and adjust as needed:
+The repository keeps a compose file for situations where you need a fully containerized stack (e.g., demos, CI, or a quick local Postgres instance). The same `.env` files are respected.
 
-   ```bash
-   cp apps/api/.env.example apps/api/.env
-   cp apps/web/.env.example apps/web/.env.local
-   ```
-
-2. Start the full stack (Postgres, API, and Next.js):
+1. Ensure the environment files are populated (see steps above).
+2. Start the stack:
 
    ```bash
    docker compose up
@@ -104,7 +122,7 @@ This monorepo uses:
 
    The API listens on `http://localhost:4000` (FastAPI/Uvicorn) and the web app on `http://localhost:3000`.
 
-3. Stop and remove containers:
+3. Shut everything down when finished:
 
    ```bash
    docker compose down

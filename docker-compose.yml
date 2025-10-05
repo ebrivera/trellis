@@ -1,3 +1,6 @@
+# Not using Docker anymore, but keeping this around for reference
+# in case we want to switch back in the future.
+
 version: '3.9'
 
 services:
