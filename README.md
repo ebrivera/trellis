@@ -7,7 +7,7 @@ A modern monorepo with Next.js, Tailwind CSS, and TypeScript.
 ```
 trellis/
 ├── apps/
-│   ├── api/                 # Express API skeleton
+│   ├── api/                 # FastAPI service
 │   └── web/                 # Next.js application
 ├── packages/
 │   ├── ui/                  # Shared UI components
@@ -50,7 +50,15 @@ trellis/
 
 ### @trellis/api
 
-Express-based API service that exposes the orchestrator endpoints.
+FastAPI-based backend that exposes the orchestrator endpoints.
+
+Run locally without Docker:
+
+```bash
+cd apps/api
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 4000
+```
 
 ### @trellis/web
 
@@ -94,7 +102,7 @@ This monorepo uses:
    docker compose up
    ```
 
-   The API listens on `http://localhost:4000` and the web app on `http://localhost:3000`.
+   The API listens on `http://localhost:4000` (FastAPI/Uvicorn) and the web app on `http://localhost:3000`.
 
 3. Stop and remove containers:
 

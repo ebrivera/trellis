@@ -84,3 +84,4 @@ coverage/
 # Temporary folders
 tmp/
 temp/
+__pycache__/

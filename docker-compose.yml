@@ -22,11 +22,10 @@ services:
         condition: service_healthy
 
   api:
-    image: node:20-alpine
+    image: python:3.12-slim
     working_dir: /app
     volumes:
-      - .:/app
-      - node_modules_cache:/app/node_modules
+      - ./apps/api:/app
     ports:
       - "4000:4000"
     environment:
@@ -34,7 +33,7 @@ services:
       PORT: 4000
       DATABASE_URL: postgres://trellis:trellis@db:5432/trellis
     command: >
-      sh -c "npm install && npm run dev --workspace=@trellis/api"
+      sh -c "pip install --no-cache-dir -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port 4000 --reload"
     depends_on:
       db:
         condition: service_healthy
