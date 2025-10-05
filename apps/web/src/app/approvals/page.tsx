@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Badge } from '../../components/ui/Badge'
 import type { ApprovalGate, MatchingPreview, MonitoringPreview, AnalysisPreview } from '@trellis/types'
+// MOCK: Import mock data - backend will replace with API calls
 import { mockMatchingApproval, mockMonitoringApproval, mockAnalysisApproval } from '../../lib/mockData'
 import { Clock, PartyPopper, CheckCircle2, XCircle, Eye, AlertTriangle, TrendingUp } from 'lucide-react'
 
@@ -18,6 +20,7 @@ const DEMO_APPROVALS: ApprovalGate[] = [
 ]
 
 export default function ApprovalsPage() {
+    const router = useRouter()
     const [activeTab, setActiveTab] = useState<Tab>('pending')
     const [pendingItems, setPendingItems] = useState<ApprovalGate[]>(DEMO_APPROVALS)
     const [approvedItems, setApprovedItems] = useState<ApprovalGate[]>([])
@@ -26,10 +29,22 @@ export default function ApprovalsPage() {
     const [modalOpen, setModalOpen] = useState(false)
 
     const handleApprove = (id: string) => {
+        // MOCK: In production, this executes the workflow and creates a result
+        // TODO: Backend will replace with POST /approval/:id/approve API call
+        // Real call: const result = await approveWorkflow(id)
+        
         const item = pendingItems.find((i) => i.id === id)
         if (item) {
             setPendingItems((prev) => prev.filter((i) => i.id !== id))
             setApprovedItems((prev) => [...prev, item])
+            
+            // Close modal if open
+            setModalOpen(false)
+            
+            // Navigate to results page
+            // In production, use the real result ID from the API
+            const resultId = `result-${Date.now()}`
+            router.push(`/results/${resultId}`)
         }
     }
 

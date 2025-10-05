@@ -5,8 +5,9 @@ import { useParams, useRouter } from 'next/navigation'
 import { Card } from '../../../components/ui/Card'
 import { Button } from '../../../components/ui/Button'
 import { Badge } from '../../../components/ui/Badge'
-import { CheckCircle2, ArrowLeft, Download, TrendingUp } from 'lucide-react'
+import { CheckCircle2, ArrowLeft, Download, TrendingUp, List } from 'lucide-react'
 import type { WorkflowResult } from '@trellis/types'
+// MOCK: Import mock data - backend will replace with API calls
 import { mockMatchingResult } from '../../../lib/mockData'
 
 export default function ResultsPage() {
@@ -16,7 +17,9 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Replace with real API call
+    // MOCK: Using mock data for now
+    // TODO: Backend will replace with GET /result/:id API call
+    // Real call: const data = await getResult(params.id as string)
     setTimeout(() => {
       setResult(mockMatchingResult)
       setLoading(false)
@@ -113,10 +116,14 @@ export default function ResultsPage() {
         </section>
 
         {/* Actions */}
-        <section className="flex gap-3">
+        <section className="flex flex-wrap gap-3">
           <Button size="lg">
             <Download className="w-5 h-5 mr-2" />
             Export Report
+          </Button>
+          <Button variant="outline" size="lg" onClick={() => router.push('/approvals')}>
+            <List className="w-5 h-5 mr-2" />
+            View Approvals
           </Button>
           <Button variant="outline" size="lg" onClick={() => router.push('/plan')}>
             Create Another Workflow
