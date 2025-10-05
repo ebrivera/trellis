@@ -44,6 +44,10 @@ export default function GoalsPage() {
     const [input, setInput] = useState('')
     const [isProcessing, setIsProcessing] = useState(false)
     const [currentPlan, setCurrentPlan] = useState<PlanPreview | null>(null)
+    const [csvUrls, setCsvUrls] = useState<Record<string, string>>({})
+    const [showCsvInput, setShowCsvInput] = useState(false)
+    const [csvFiles, setCsvFiles] = useState<Record<string, File>>({})
+    const [dataSource, setDataSource] = useState<'url' | 'file'>('url')
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     const scrollToBottom = () => {
@@ -111,15 +115,15 @@ export default function GoalsPage() {
     }, 1500)
     }
 
-     const handleApprove = () => {
-         const approvalMessage: Message = {
-             id: Date.now().toString(),
-             role: 'system',
-             content: 'Plan approved! Your plan has been moved to the Approvals queue. You can review it on the Approvals page.',
-         }
-         setMessages((prev) => [...prev, approvalMessage])
-         setCurrentPlan(null)
-     }
+    const handleApprove = () => {
+        const approvalMessage: Message = {
+            id: Date.now().toString(),
+            role: 'system',
+            content: 'Plan approved! Your plan has been moved to the Approvals queue. You can review it on the Approvals page.',
+        }
+        setMessages((prev) => [...prev, approvalMessage])
+        setCurrentPlan(null)
+    }
 
     const handleRevise = () => {
         const reviseMessage: Message = {
@@ -180,6 +184,110 @@ export default function GoalsPage() {
                     </button>
                     ))}
                 </div>
+            </div>
+            
+            {/* // Add after templates section, before chat messages: */}
+            <div className="mb-6">
+                <button
+                    onClick={() => setShowCsvInput(!showCsvInput)}
+                    className="text-sm transition-colors text-white/70 hover:text-white"
+                >
+                    {showCsvInput ? '− Hide' : '+ Add'} CSV/Sheet URLs
+                </button>
+            
+                {showCsvInput && (
+                    <Card className="mt-3" padding="lg">
+                        <h3 className="mb-3 font-semibold text-white">Upload Data Sources</h3>
+                    
+                        {/* Toggle */}
+                        <div className="flex gap-2 mb-4">
+                            <button
+                            onClick={() => setDataSource('url')}
+                            className={`px-4 py-2 rounded-lg transition-colors ${
+                                dataSource === 'url' 
+                                ? 'bg-white text-black' 
+                                : 'bg-white/5 text-white/70 hover:bg-white/10'
+                            }`}
+                            >
+                                Google Sheets URL
+                            </button>
+                            <button
+                                onClick={() => setDataSource('file')}
+                                className={`px-4 py-2 rounded-lg transition-colors ${
+                                    dataSource === 'file' 
+                                    ? 'bg-white text-black' 
+                                    : 'bg-white/5 text-white/70 hover:bg-white/10'
+                                }`}
+                                >
+                                Upload CSV File
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {/* Source */}
+                            <div>
+                                <label className="block mb-1 text-sm text-white/70">
+                                    Source File (e.g., volunteers, visitors, gifts)
+                                </label>
+                                {dataSource === 'url' ? (
+                                    <input
+                                        type="text"
+                                        placeholder="https://docs.google.com/spreadsheets/d/..."
+                                        value={csvUrls.source || ''}
+                                        onChange={(e) => setCsvUrls(prev => ({ ...prev, source: e.target.value }))}
+                                        className="w-full px-4 py-2 text-white border rounded-lg bg-white/5 border-white/20 placeholder-white/30 focus:outline-none focus:border-white/40"
+                                    />
+                                ) : (
+                                    <input
+                                        type="file"
+                                        accept=".csv,.xlsx"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0]
+                                            if (file) setCsvFiles(prev => ({ ...prev, source: file }))
+                                        }}
+                                        className="w-full px-4 py-2 text-white border rounded-lg bg-white/5 border-white/20 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-white/10 file:text-white hover:file:bg-white/20"
+                                    />
+                                )}
+                                {csvFiles.source && (
+                                    <p className="mt-1 text-sm text-green-400">
+                                    ✓ {csvFiles.source.name}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Target */}
+                            <div>
+                                <label className="block mb-1 text-sm text-white/70">
+                                    Target File (optional - for matching only)
+                                </label>
+                                {dataSource === 'url' ? (
+                                    <input
+                                        type="text"
+                                        placeholder="https://docs.google.com/spreadsheets/d/..."
+                                        value={csvUrls.target || ''}
+                                        onChange={(e) => setCsvUrls(prev => ({ ...prev, target: e.target.value }))}
+                                        className="w-full px-4 py-2 text-white border rounded-lg bg-white/5 border-white/20 placeholder-white/30 focus:outline-none focus:border-white/40"
+                                    />
+                                ) : (
+                                    <input
+                                        type="file"
+                                        accept=".csv,.xlsx"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0]
+                                            if (file) setCsvFiles(prev => ({ ...prev, target: file }))
+                                        }}
+                                        className="w-full px-4 py-2 text-white border rounded-lg bg-white/5 border-white/20 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-white/10 file:text-white hover:file:bg-white/20"
+                                    />
+                                )}
+                                {csvFiles.target && (
+                                    <p className="mt-1 text-sm text-green-400">
+                                        ✓ {csvFiles.target.name}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    </Card>
+                )}
             </div>
 
             {/* Chat Messages Container */}
