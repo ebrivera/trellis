@@ -105,15 +105,20 @@ class TemplateChoice(BaseModel):
 # MATCHING TEMPLATE
 # ============================================================================
 
+class FieldWeight(BaseModel):
+    """Weight for a single match field"""
+    field: str = Field(..., description="Field name")
+    weight: float = Field(..., description="Weight value (all weights must sum to 1.0)")
+
 class MatchFields(BaseModel):
     """Which fields to score on for matching"""
     score_on: List[str] = Field(..., description="Field names to compare (e.g., ['interests', 'zip'])")
-    weights: Dict[str, float] = Field(..., description="Weight for each field (must sum to 1.0)")
+    weights: List[FieldWeight] = Field(..., description="Weight for each field (must sum to 1.0)")
 
     @field_validator('weights')
     @classmethod
-    def validate_weights_sum(cls, v: Dict[str, float]) -> Dict[str, float]:
-        total = sum(v.values())
+    def validate_weights_sum(cls, v: List[FieldWeight]) -> List[FieldWeight]:
+        total = sum(fw.weight for fw in v)
         if not (0.99 <= total <= 1.01):  # Allow small floating point errors
             raise ValueError(f"Weights must sum to 1.0, got {total}")
         return v
