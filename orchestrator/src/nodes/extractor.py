@@ -8,13 +8,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 from typing import Dict, Any
-from ..schemas import (
-    TemplateType, 
-    MatchingParams, 
-    MonitoringParams, 
-    AnalysisParams,
-    get_params_model
-)
+from ..schemas import TemplateType
+from ..templates import MatchingParams, MonitoringParams, AnalysisParams, get_params_model
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 PROMPTS_DIR = PROJECT_ROOT / "prompts"

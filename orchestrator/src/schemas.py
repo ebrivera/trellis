@@ -1,6 +1,6 @@
 """
-Pydantic schemas for the 3 workflow templates.
-These enforce the structure of params extracted by the LLM.
+Shared Pydantic schemas used across all workflow templates.
+Template-specific models are in src/templates/
 """
 
 from typing import List, Dict, Any, Literal, Optional
@@ -9,7 +9,7 @@ from enum import Enum
 
 
 # ============================================================================
-# ENUMS & SHARED MODELS
+# ENUMS
 # ============================================================================
 
 class Channel(str, Enum):
@@ -42,7 +42,7 @@ class TemplateType(str, Enum):
 
 
 # ============================================================================
-# COMMON BUILDING BLOCKS
+# SHARED BUILDING BLOCKS
 # ============================================================================
 
 class EntitySource(BaseModel):
@@ -87,7 +87,7 @@ class NotificationConfig(BaseModel):
 
 
 # ============================================================================
-# TEMPLATE CHOICE (Classifier Output)
+# CLASSIFIER OUTPUT
 # ============================================================================
 
 class TemplateChoice(BaseModel):
@@ -99,186 +99,6 @@ class TemplateChoice(BaseModel):
         default=None,
         description="Question to ask user if confidence < 0.8"
     )
-
-
-# ============================================================================
-# MATCHING TEMPLATE
-# ============================================================================
-
-class FieldWeight(BaseModel):
-    """Weight for a single match field"""
-    field: str = Field(..., description="Field name")
-    weight: float = Field(..., description="Weight value (all weights must sum to 1.0)")
-
-class MatchFields(BaseModel):
-    """Which fields to score on for matching"""
-    score_on: List[str] = Field(..., description="Field names to compare (e.g., ['interests', 'zip'])")
-    weights: List[FieldWeight] = Field(..., description="Weight for each field (must sum to 1.0)")
-
-    @field_validator('weights')
-    @classmethod
-    def validate_weights_sum(cls, v: List[FieldWeight]) -> List[FieldWeight]:
-        total = sum(fw.weight for fw in v)
-        if not (0.99 <= total <= 1.01):  # Allow small floating point errors
-            raise ValueError(f"Weights must sum to 1.0, got {total}")
-        return v
-
-
-class MatchConstraints(BaseModel):
-    """Constraints for matching algorithm"""
-    max_per_target: Optional[str] = Field(
-        default=None,
-        description="Field name in target entity that specifies capacity (e.g., 'sunday_count')"
-    )
-    respect_preferences: bool = Field(
-        default=True,
-        description="Whether to consider user preferences in matching"
-    )
-    min_score_threshold: Optional[float] = Field(
-        default=None,
-        ge=0.0,
-        le=1.0,
-        description="Minimum match score to accept (0-1)"
-    )
-
-
-class MatchingParams(BaseModel):
-    """Parameters for the Matching template"""
-    template: Literal[TemplateType.MATCHING] = TemplateType.MATCHING
-    source: EntitySource = Field(..., description="Entities to be assigned (volunteers, mentees)")
-    target: EntitySource = Field(..., description="Targets to assign to (roles, mentors)")
-    match_strategy: MatchStrategy = Field(
-        default=MatchStrategy.CAPACITY_BALANCED,
-        description="Algorithm to use for matching"
-    )
-    match_fields: MatchFields = Field(..., description="Which fields to score on")
-    constraints: MatchConstraints = Field(
-        default_factory=MatchConstraints,
-        description="Constraints for matching"
-    )
-    notifications: List[NotificationConfig] = Field(
-        default_factory=list,
-        description="Notifications to send after approval"
-    )
-
-
-# ============================================================================
-# MONITORING TEMPLATE
-# ============================================================================
-
-class TimeCondition(BaseModel):
-    """Time-based condition for monitoring"""
-    time_field: str = Field(..., description="Date field to check (e.g., 'visit_date')")
-    threshold: str = Field(..., description="Time threshold (e.g., '14 days', '90 days')")
-    operator: Literal[">", "<", ">=", "<=", "="] = Field(
-        default=">",
-        description="Comparison operator"
-    )
-    additional_filters: Optional[List[str]] = Field(
-        default=None,
-        description="Extra SQL-like conditions (e.g., 'last_contact_date IS NULL')"
-    )
-
-    @field_validator('threshold')
-    @classmethod
-    def validate_threshold_format(cls, v: str) -> str:
-        # Basic validation that it looks like "N days/weeks/months"
-        parts = v.split()
-        if len(parts) != 2:
-            raise ValueError("Threshold must be in format 'N days|weeks|months'")
-        try:
-            int(parts[0])
-        except ValueError:
-            raise ValueError(f"Threshold must start with a number, got '{parts[0]}'")
-        if parts[1] not in ['day', 'days', 'week', 'weeks', 'month', 'months']:
-            raise ValueError(f"Threshold unit must be days/weeks/months, got '{parts[1]}'")
-        return v
-
-
-class Alert(BaseModel):
-    """Alert configuration for monitoring"""
-    recipient: str = Field(..., description="Email or phone to send alert to")
-    channel: Channel = Field(..., description="SMS or email")
-    template: str = Field(..., description="Alert message template")
-
-
-class OptionalAction(BaseModel):
-    """Optional follow-up action after monitoring alert"""
-    type: Literal["bulk_notification"] = Field(..., description="Type of action")
-    recipients: str = Field(..., description="Who gets the follow-up (e.g., 'flagged_visitors')")
-    channel: Channel = Field(..., description="SMS or email")
-    template: str = Field(..., description="Message template")
-    requires_approval: bool = Field(default=True, description="Whether this needs approval")
-
-
-class MonitoringParams(BaseModel):
-    """Parameters for the Monitoring template"""
-    template: Literal[TemplateType.MONITORING] = TemplateType.MONITORING
-    source: EntitySource = Field(..., description="Data to monitor (visitors, donors)")
-    condition: TimeCondition = Field(..., description="Time-based trigger condition")
-    alerts: List[Alert] = Field(..., description="Who to alert when condition is met")
-    optional_action: Optional[OptionalAction] = Field(
-        default=None,
-        description="Optional follow-up action (e.g., send bulk SMS to flagged entities)"
-    )
-
-
-# ============================================================================
-# ANALYSIS TEMPLATE
-# ============================================================================
-
-class MetricFormula(BaseModel):
-    """A metric to calculate"""
-    name: str = Field(..., description="Metric name (e.g., 'total_raised')")
-    formula: str = Field(..., description="SQL-like formula (e.g., 'SUM(amount)')")
-    group_by: Optional[str] = Field(
-        default=None,
-        description="Field to group by (e.g., 'initiative_name')"
-    )
-    format: Optional[Literal["currency", "percent", "number"]] = Field(
-        default="number",
-        description="How to format the result"
-    )
-
-
-class FlagCondition(BaseModel):
-    """Condition to flag entities for attention"""
-    name: str = Field(..., description="Flag name (e.g., 'lapsed_donors')")
-    condition: str = Field(..., description="SQL-like condition to detect outliers")
-    group_by: Optional[str] = Field(
-        default=None,
-        description="Field to group by (e.g., 'donor_id')"
-    )
-    action: Literal["notify", "flag", "report"] = Field(
-        default="flag",
-        description="What to do with flagged entities"
-    )
-
-
-class AnalysisParams(BaseModel):
-    """Parameters for the Analysis template"""
-    template: Literal[TemplateType.ANALYSIS] = TemplateType.ANALYSIS
-    sources: List[EntitySource] = Field(..., description="Data sources to analyze")
-    join_on: Optional[str] = Field(
-        default=None,
-        description="Field to join sources on (e.g., 'initiative_name')"
-    )
-    metrics: List[MetricFormula] = Field(..., description="Metrics to calculate")
-    flags: Optional[List[FlagCondition]] = Field(
-        default=None,
-        description="Conditions to flag outliers/issues"
-    )
-    notifications: List[NotificationConfig] = Field(
-        default_factory=list,
-        description="Notifications to send after approval"
-    )
-
-    @field_validator('sources')
-    @classmethod
-    def validate_multiple_sources(cls, v: List[EntitySource]) -> List[EntitySource]:
-        if len(v) < 1:
-            raise ValueError("Analysis requires at least one data source")
-        return v
 
 
 # ============================================================================
@@ -310,12 +130,11 @@ class OrchestratorState(BaseModel):
     clarifications: List[str] = Field(default_factory=list)
 
     class Config:
-        # Allow arbitrary types for flexibility
         arbitrary_types_allowed = True
 
 
 # ============================================================================
-# EXECUTION RESULTS (for approval gate preview)
+# EXECUTION PREVIEWS (for approval gate)
 # ============================================================================
 
 class MatchingPreview(BaseModel):
@@ -358,19 +177,3 @@ class ApprovalGate(BaseModel):
     status: Literal["pending", "approved", "rejected"] = "pending"
     created_at: str  # ISO timestamp
     resolved_at: Optional[str] = None
-
-
-# ============================================================================
-# HELPER: Get params model class by template type
-# ============================================================================
-
-def get_params_model(template: TemplateType):
-    """Return the appropriate Pydantic model for a template type"""
-    if template == TemplateType.MATCHING:
-        return MatchingParams
-    elif template == TemplateType.MONITORING:
-        return MonitoringParams
-    elif template == TemplateType.ANALYSIS:
-        return AnalysisParams
-    else:
-        raise ValueError(f"Unknown template type: {template}")
