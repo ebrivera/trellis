@@ -1,0 +1,135 @@
+'use client'
+
+import Link from 'next/link'
+import { useState } from 'react'
+import { ProfileDropdown } from './ProfileDropdown'
+import { User, Settings, LogOut } from 'lucide-react'
+
+export default function Navbar() {
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+    return (
+        <div className="fixed left-0 right-0 z-50 flex justify-center px-6 top-6">
+            <nav className="relative w-full max-w-5xl">
+                <div className="border shadow-2xl rounded-3xl bg-white/10 backdrop-blur-xl border-white/20 shadow-black/10">
+                    <div className="flex items-center justify-between h-16 gap-4 px-6">
+                        {/* Logo */}
+                        <Link href="/" className="flex items-center gap-2 shrink-0">
+                            <span className="text-lg font-semibold text-white">trellis.</span>
+                        </Link>
+
+                        {/* Nav Items - Desktop */}
+                        <div className="items-center justify-center flex-1 hidden gap-1 md:flex sm:gap-2">
+                            <NavLink href="/">Dashboard</NavLink>
+                            <NavLink href="/plan">Plan</NavLink>
+                            <NavLink href="/approvals">Approvals</NavLink>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            {/* Hamburger Menu - Mobile */}
+                            <button
+                                className="flex items-center justify-center w-10 h-10 text-white transition-transform rounded-lg md:hidden hover:bg-white/10"
+                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                aria-label="Toggle menu"
+                            >
+                                {mobileMenuOpen ? (
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                    </svg>
+                                )}
+                            </button>
+
+                            {/* Profile - Desktop Only */}
+                            <div className="hidden md:block">
+                                <ProfileDropdown />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Mobile Menu Dropdown */}
+                    {mobileMenuOpen && (
+                        <div className="border-t md:hidden border-white/20">
+                            <div className="flex flex-col p-4 space-y-4">
+                                {/* Navigation Links */}
+                                <div className="flex flex-col gap-1">
+                                    <MobileNavLink href="/" onClick={() => setMobileMenuOpen(false)}>
+                                        Dashboard
+                                    </MobileNavLink>
+                                    <MobileNavLink href="/plan" onClick={() => setMobileMenuOpen(false)}>
+                                        Plan
+                                    </MobileNavLink>
+                                    <MobileNavLink href="/approvals" onClick={() => setMobileMenuOpen(false)}>
+                                        Approvals
+                                    </MobileNavLink>
+                                </div>
+
+                                {/* Profile Section */}
+                                <div className="pt-3 border-t border-white/20">
+                                    <div className="px-4 py-2 mb-2">
+                                        <p className="font-semibold text-white">Pastor John</p>
+                                        <p className="text-sm text-white/60">john@church.org</p>
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <MobileNavLink href="/profile" onClick={() => setMobileMenuOpen(false)}>
+                                            <User className="inline-block w-4 h-4 mr-2" />
+                                            Profile
+                                        </MobileNavLink>
+                                        <MobileNavLink href="/settings" onClick={() => setMobileMenuOpen(false)}>
+                                            <Settings className="inline-block w-4 h-4 mr-2" />
+                                            Settings
+                                        </MobileNavLink>
+                                        <MobileNavLink 
+                                            href="/" 
+                                            onClick={() => setMobileMenuOpen(false)}
+                                            className="text-red-400"
+                                        >
+                                            <LogOut className="inline-block w-4 h-4 mr-2" />
+                                            Log Out
+                                        </MobileNavLink>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </nav>
+        </div>
+    )
+}
+
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+    return (
+        <Link
+            href={href}
+            className="px-3 py-2 text-sm font-medium text-white transition-colors rounded-lg sm:px-4 sm:text-base hover:bg-white/10"
+        >
+            {children}
+        </Link>
+    )
+}
+
+function MobileNavLink({ 
+    href, 
+    children, 
+    onClick,
+    className = ''
+}: { 
+    href: string
+    children: React.ReactNode
+    onClick: () => void
+    className?: string
+}) {
+    return (
+        <Link
+            href={href}
+            onClick={onClick}
+            className={`px-4 py-3 text-base font-medium text-white transition-colors rounded-lg hover:bg-white/10 ${className}`}
+        >
+            {children}
+        </Link>
+    )
+}

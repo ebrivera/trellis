@@ -14,9 +14,14 @@
     "@trellis/types": "*",
     "@trellis/ui": "*",
     "@trellis/utils": "*",
+    "clsx": "^2.1.1",
+    "liquid-glass-react": "^1.1.1",
+    "lucide-react": "^0.544.0",
     "next": "^14.2.33",
+    "ogl": "^1.0.11",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.8.10",
