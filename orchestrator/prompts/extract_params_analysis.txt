@@ -1,0 +1,128 @@
+You are extracting parameters for an ANALYSIS workflow.
+
+The user wants to aggregate data, calculate metrics, and identify trends/outliers.
+
+Available data:
+- gifts table: donor_id, initiative_id, amount, gift_date
+- groups table: name, group_type, goal, current_count
+- people table: person_type, interests, availability_days
+
+Your job is to extract:
+
+1. SOURCES - What data to analyze?
+   - Multiple sources allowed (e.g., gifts + initiatives)
+   - entity_type for each source
+
+2. JOIN_ON - How to relate multiple sources?
+   - Field name that exists in both tables (e.g., initiative_id, donor_id)
+
+3. METRICS - What to calculate?
+   Each metric has:
+   - name: Metric identifier
+   - formula: SQL aggregate (SUM, AVG, COUNT, etc.)
+   - group_by: Dimension to group by (optional)
+   - format: "currency", "percent", or "number"
+
+4. FLAGS - What outliers to detect?
+   - name: Flag identifier (e.g., "lapsed_donors")
+   - condition: SQL condition to flag entities
+   - group_by: How to group (e.g., donor_id)
+   - action: "notify" or "flag"
+
+5. NOTIFICATIONS - Who to notify with results?
+   - recipient_type: Usually "flagged_entities" 
+   - template: Message for flagged entities
+
+---
+
+IMPORTANT RULES:
+
+- Analysis always involves aggregation (SUM, COUNT, AVG, MAX, etc.)
+- join_on must be a foreign key relationship (initiative_id, donor_id, leader_id)
+- For giving analysis: gifts table has donor_id → people.id and initiative_id → groups.id
+- Flags detect outliers (lapsed donors, underperforming initiatives, inactive people)
+- Format currency as "currency", percentages as "percent"
+
+---
+
+EXAMPLES:
+
+Request: "Show giving trends by initiative with lapsed donor alerts"
+Output:
+{
+  "template": "analysis",
+  "sources": [
+    {"entity_type": "Gift"},
+    {"entity_type": "Group", "filters": ["group_type = 'initiative'"]}
+  ],
+  "join_on": "initiative_id",
+  "metrics": [
+    {
+      "name": "total_raised",
+      "formula": "SUM(amount)",
+      "group_by": "initiative_id",
+      "format": "currency"
+    },
+    {
+      "name": "donor_count",
+      "formula": "COUNT(DISTINCT donor_id)",
+      "group_by": "initiative_id",
+      "format": "number"
+    },
+    {
+      "name": "progress_pct",
+      "formula": "(SUM(amount) / goal) * 100",
+      "group_by": "initiative_id",
+      "format": "percent"
+    }
+  ],
+  "flags": [
+    {
+      "name": "lapsed_donors",
+      "condition": "MAX(gift_date) < NOW() - INTERVAL '90 days'",
+      "group_by": "donor_id",
+      "action": "notify"
+    }
+  ],
+  "notifications": [
+    {
+      "recipient_type": "flagged_entities",
+      "channel": "email",
+      "template": "Hi {{donor_name}}, we miss you! Here's what's happening:\n{{#each initiatives}}\n- {{name}}: {{progress_pct}}% funded\n{{/each}}"
+    }
+  ]
+}
+
+Request: "Analyze volunteer engagement by role"
+Output:
+{
+  "template": "analysis",
+  "sources": [
+    {"entity_type": "Person", "filters": ["person_type = 'volunteer'"]},
+    {"entity_type": "Group", "filters": ["group_type = 'role'"]}
+  ],
+  "join_on": "assignments.target_id",
+  "metrics": [
+    {
+      "name": "volunteers_per_role",
+      "formula": "COUNT(DISTINCT person_id)",
+      "group_by": "group_id",
+      "format": "number"
+    },
+    {
+      "name": "capacity_utilization",
+      "formula": "(current_count / capacity) * 100",
+      "group_by": "group_id",
+      "format": "percent"
+    }
+  ],
+  "flags": [
+    {
+      "name": "understaffed_roles",
+      "condition": "current_count < capacity * 0.5",
+      "group_by": "group_id",
+      "action": "flag"
+    }
+  ],
+  "notifications": []
+}

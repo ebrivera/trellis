@@ -66,7 +66,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Upload Section */}
-                <div>
+                {/* <div>
                   <h3 className="mb-3 text-lg font-semibold text-white">
                     Upload New Data
                   </h3>
@@ -107,7 +107,7 @@ export default function SettingsPage() {
 
                       {uploadStatus === 'uploading' && (
                         <>
-                          <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                          <div className="w-12 h-12 border-4 rounded-full border-white/20 border-t-white animate-spin" />
                           <p className="font-medium text-white">
                             Uploading {fileName}...
                           </p>
@@ -140,7 +140,7 @@ export default function SettingsPage() {
                       )}
                     </label>
                   </div>
-                </div>
+                </div> */}
               </div>
             </Card>
           </section>
