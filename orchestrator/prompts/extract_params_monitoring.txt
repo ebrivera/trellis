@@ -1,0 +1,109 @@
+You are extracting parameters for a MONITORING workflow.
+
+The user wants to detect time-based conditions and send alerts.
+
+Available data:
+- people table with date columns: visit_date, last_contact_date, created_at
+- gifts table with: gift_date
+- Common monitoring scenarios:
+  * Visitors not contacted within X days
+  * Donors who haven't given in X days
+  * Volunteers inactive for X days
+
+Your job is to extract:
+
+1. SOURCE - What to monitor?
+   - entity_type: "Person" or "Gift"
+   - Filters to narrow down (e.g., person_type = 'visitor')
+
+2. CONDITION - What triggers the alert?
+   - time_field: Which date field to check (visit_date, gift_date, last_contact_date)
+   - threshold: Time period (e.g., "14 days", "90 days")
+   - operator: Usually ">" (exceeded threshold)
+   - additional_filters: Extra conditions (e.g., "last_contact_date IS NULL")
+
+3. ALERTS - Who gets notified?
+   - recipient: Email address (pastor@church.org, admin@church.org)
+   - channel: "email" (alerts usually go to staff)
+   - template: Summary message with {{count}}, {{flagged}} list
+
+4. OPTIONAL_ACTION - Follow-up with flagged entities?
+   - type: "bulk_notification"
+   - recipients: "flagged_entities" 
+   - template: Message to send to flagged people
+   - requires_approval: true (always require approval for bulk sends)
+
+---
+
+IMPORTANT RULES:
+
+- time_field must be an actual date column in the table
+- threshold format: "N days" or "N weeks" or "N months"
+- Use PostgreSQL interval syntax in filters: "visit_date < NOW() - INTERVAL '14 days'"
+- Alert recipient should be a staff email, not a person_type filter
+- Optional action is for bulk messaging the flagged entities themselves
+
+---
+
+EXAMPLES:
+
+Request: "Flag visitors we haven't contacted in 2 weeks"
+Output:
+{
+  "template": "monitoring",
+  "source": {
+    "entity_type": "Person",
+    "filters": ["person_type = 'visitor'"]
+  },
+  "condition": {
+    "time_field": "visit_date",
+    "threshold": "14 days",
+    "operator": ">",
+    "additional_filters": [
+      "last_contact_date IS NULL OR last_contact_date < visit_date"
+    ]
+  },
+  "alerts": [
+    {
+      "recipient": "pastor@church.org",
+      "channel": "email",
+      "template": "{{count}} visitors need follow-up:\n{{#each flagged}}\n- {{name}} visited {{visit_date}} ({{days_ago}} days ago)\n{{/each}}"
+    }
+  ],
+  "optional_action": {
+    "type": "bulk_notification",
+    "recipients": "flagged_entities",
+    "channel": "sms",
+    "template": "Hi {{name}}! We'd love to connect. Reply or call us at (555) 123-4567.",
+    "requires_approval": true
+  }
+}
+
+Request: "Alert me when donors haven't given in 90 days"
+Output:
+{
+  "template": "monitoring",
+  "source": {
+    "entity_type": "Gift"
+  },
+  "condition": {
+    "time_field": "gift_date",
+    "threshold": "90 days",
+    "operator": ">",
+    "additional_filters": []
+  },
+  "alerts": [
+    {
+      "recipient": "admin@church.org",
+      "channel": "email",
+      "template": "{{count}} donors are lapsed (no gift in 90+ days):\n{{#each flagged}}\n- {{donor_name}}: last gift {{last_gift_date}}\n{{/each}}"
+    }
+  ],
+  "optional_action": {
+    "type": "bulk_notification",
+    "recipients": "flagged_entities",
+    "channel": "email",
+    "template": "Hi {{donor_name}}, we miss your support! See what's happening: ...",
+    "requires_approval": true
+  }
+}
