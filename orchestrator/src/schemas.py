@@ -19,12 +19,10 @@ class Channel(str, Enum):
 
 
 class EntityType(str, Enum):
-    """Fixed entity types matching DB schema"""
-    PERSON = "Person"
-    ROLE = "Role"
-    GROUP = "Group"
-    GIFT = "Gift"
-    INITIATIVE = "Initiative"
+    """Maps to database tables"""
+    PERSON = "people"
+    GROUP = "groups"
+    GIFT = "gifts"
 
 
 class MatchStrategy(str, Enum):
@@ -45,8 +43,22 @@ class TemplateType(str, Enum):
 # SHARED BUILDING BLOCKS
 # ============================================================================
 
+class FilterCondition(BaseModel):
+    """A single filter condition for querying entities"""
+    field: str = Field(..., description="Field name to filter on (e.g., 'capacity', 'visit_date')")
+    operator: Literal["=", ">", ">=", "<", "<=", "!=", "contains"] = Field(
+        default="=",
+        description="Comparison operator"
+    )
+    value: str = Field(..., description="Value to compare (will be converted to appropriate type)")
+
+    class Config:
+        # Required for OpenAI Structured Outputs
+        extra = "forbid"
+
+
 class EntitySource(BaseModel):
-    """Represents a data source (CSV file) for an entity type"""
+    """DEPRECATED: Use EntityQuery instead. Kept for backward compatibility."""
     file: str = Field(..., description="CSV filename (e.g., 'volunteers.csv')")
     entity_type: EntityType = Field(..., description="Type of entity in this file")
     filters: Optional[List[str]] = Field(
@@ -60,6 +72,49 @@ class EntitySource(BaseModel):
         if not v.endswith('.csv'):
             raise ValueError("File must be a CSV")
         return v
+
+
+class EntityQuery(BaseModel):
+    """Query specification for loading entities from database"""
+    entity_type: EntityType = Field(..., description="Which table to query (people, groups, gifts)")
+    subtype: Optional[str] = Field(
+        default=None,
+        description="Row filter: person_type (volunteer, visitor, mentor, mentee, donor) or group_type (role, initiative, team)"
+    )
+    filters: Optional[List[FilterCondition]] = Field(
+        default=None,
+        description="Additional filter conditions"
+    )
+
+    @field_validator('subtype')
+    @classmethod
+    def validate_subtype(cls, v: Optional[str], info) -> Optional[str]:
+        if v is None:
+            return v
+
+        entity_type = info.data.get('entity_type')
+
+        # Valid person subtypes
+        if entity_type == EntityType.PERSON:
+            valid_subtypes = ['volunteer', 'visitor', 'mentor', 'mentee', 'donor', 'leader']
+            if v not in valid_subtypes:
+                raise ValueError(f"Invalid person_type: {v}. Must be one of {valid_subtypes}")
+
+        # Valid group subtypes
+        elif entity_type == EntityType.GROUP:
+            valid_subtypes = ['role', 'initiative', 'team']
+            if v not in valid_subtypes:
+                raise ValueError(f"Invalid group_type: {v}. Must be one of {valid_subtypes}")
+
+        # Gifts don't have subtypes
+        elif entity_type == EntityType.GIFT and v is not None:
+            raise ValueError("EntityType.GIFT does not support subtypes")
+
+        return v
+
+    class Config:
+        # Required for OpenAI Structured Outputs
+        extra = "forbid"
 
 
 class NotificationConfig(BaseModel):

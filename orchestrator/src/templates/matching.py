@@ -6,9 +6,9 @@ Examples: volunteers → roles, mentees → mentors
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 from ..schemas import (
-    EntitySource, 
-    NotificationConfig, 
-    MatchStrategy, 
+    EntityQuery,
+    NotificationConfig,
+    MatchStrategy,
     TemplateType
 )
 
@@ -60,12 +60,12 @@ class MatchConstraints(BaseModel):
 class MatchingParams(BaseModel):
     """Parameters for the Matching template"""
     template: Literal[TemplateType.MATCHING] = TemplateType.MATCHING
-    source: EntitySource = Field(
-        ..., 
+    source: EntityQuery = Field(
+        ...,
         description="Entities to be assigned (volunteers, mentees)"
     )
-    target: EntitySource = Field(
-        ..., 
+    target: EntityQuery = Field(
+        ...,
         description="Targets to assign to (roles, mentors)"
     )
     match_strategy: MatchStrategy = Field(
@@ -73,7 +73,7 @@ class MatchingParams(BaseModel):
         description="Algorithm to use for matching"
     )
     match_fields: MatchFields = Field(
-        ..., 
+        ...,
         description="Which fields to score on"
     )
     constraints: MatchConstraints = Field(

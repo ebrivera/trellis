@@ -13,6 +13,13 @@ dist/
 build/
 *.tsbuildinfo
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
 # orchestration files
 /orchestrator/venv
 /orchestrator/__pycache__/
