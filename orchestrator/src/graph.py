@@ -371,11 +371,16 @@ async def execute_matching(params: MatchingParams, workflow_run_id: str) -> Dict
     # Step 5: Send notifications
     notification_results = []
     for notif_config in params.notifications:
+        
         # Determine recipients based on recipient_type
         if notif_config.recipient_type == "source":
-            recipients = source_df[source_df['id'].isin([a['source_id'] for a in assignments])].to_dict('records')
-        elif notif_config.recipient_type == "target":
-            recipients = target_df[target_df['id'].isin([a['target_id'] for a in assignments])].to_dict('records')
+            # Convert assignment IDs to strings for comparison
+            source_ids = [str(a['source_id']) for a in assignments]
+            # Convert DataFrame IDs to strings too
+            recipients = source_df[source_df['id'].astype(str).isin(source_ids)].to_dict('records')
+        elif notif_config.recipient_type in ["target", "target_owners"]:
+            target_ids = [str(a['target_id']) for a in assignments]
+            recipients = target_df[target_df['id'].astype(str).isin(target_ids)].to_dict('records')
         else:
             recipients = []
         
