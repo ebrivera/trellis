@@ -6,16 +6,16 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Header, status
 
 from .. import audit
-from ..errors import ApplicationError
 from ..schemas import (
     ApprovalLookupParams,
     ApprovalResponse,
+    ApprovalDecisionPayload,
+    ApprovalDecisionRequest,
     OperationContext,
     OrchestrateRequest,
     OrchestrateResponse,
-    TemplateName,
-    WorkflowPayload,
 )
+from ..services import workflows
 
 router = APIRouter()
 
@@ -46,21 +46,6 @@ async def get_operation_context(
     )
 
 
-async def _orchestrate_workflow(
-    payload: OrchestrateRequest,
-    context: OperationContext | None = None,
-) -> OrchestrateResponse:
-    template = payload.template or TemplateName.matching
-    workflow = WorkflowPayload(template=template, params=payload.params or {})
-
-    return OrchestrateResponse(
-        status="pending",
-        workflow=workflow,
-        message="Workflow queued for approval. Implement executor to continue.",
-        received_at=datetime.utcnow(),
-    )
-
-
 @router.post(
     "/orchestrate",
     status_code=status.HTTP_202_ACCEPTED,
@@ -78,29 +63,7 @@ async def orchestrate_workflow(
         metadata=payload.metadata or {},
     )
 
-    return await audit.audit_call("orchestrate_workflow", _orchestrate_workflow, payload, context)
-
-
-async def _fetch_approval_gate(
-    params: ApprovalLookupParams,
-    _context: OperationContext | None = None,
-) -> ApprovalResponse:
-    if not params.id:
-        raise ApplicationError(
-            "Approval identifier is required",
-            status_code=400,
-            code="MISSING_ID",
-        )
-
-    return ApprovalResponse(
-        id=params.id,
-        status="pending",
-        changes=[],
-        next_actions=[
-            {"label": "Approve", "href": f"/approval/{params.id}/approve"},
-            {"label": "Reject", "href": f"/approval/{params.id}/reject"},
-        ],
-    )
+    return await audit.audit_call("orchestrate_workflow", workflows.create_workflow_run, payload, context)
 
 
 @router.get(
@@ -113,4 +76,18 @@ async def get_approval_gate(
     context: OperationContext = Depends(get_operation_context),
 ) -> ApprovalResponse:
     params = ApprovalLookupParams(id=approval_id)
-    return await audit.audit_call("fetch_approval_gate", _fetch_approval_gate, params, context)
+    return await audit.audit_call("fetch_approval_gate", workflows.fetch_approval_gate, params, context)
+
+
+@router.post(
+    "/approval/{approval_id}/decide",
+    response_model=ApprovalResponse,
+    response_model_by_alias=True,
+)
+async def decide_approval_gate(
+    approval_id: str,
+    request: ApprovalDecisionRequest,
+    context: OperationContext = Depends(get_operation_context),
+) -> ApprovalResponse:
+    payload = ApprovalDecisionPayload(id=approval_id, decision=request.decision, reason=request.reason)
+    return await audit.audit_call("decide_approval_gate", workflows.decide_approval_gate, payload, context)
