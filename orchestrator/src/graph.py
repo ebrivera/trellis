@@ -3,6 +3,7 @@
 Orchestration graph: NL request → template classification → param extraction → execution
 """
 
+import json
 from typing import Dict, Any, Optional
 from uuid import uuid4
 from datetime import datetime
@@ -65,8 +66,10 @@ async def orchestrate_request(request: str, available_files: list[str] = None) -
     
     # Update workflow with extracted params
     await db_execute(
-        "UPDATE workflow_runs SET extracted_params = $1, status = $2 WHERE id = $3",
-        state['params'], "awaiting_approval", workflow_id
+        "UPDATE workflow_runs SET extracted_params = $1::jsonb, status = $2 WHERE id = $3",
+        json.dumps(state['params']),  # Convert dict to JSON string
+        "awaiting_approval", 
+        workflow_id
     )
     
     # Step 3: Generate preview (execute dry-run without commits)
@@ -124,6 +127,8 @@ async def execute_workflow(approval_id: str) -> Dict[str, Any]:
     # Parse template and params
     template = TemplateType(workflow['template_type'])
     params_dict = workflow['extracted_params']
+    if isinstance(params_dict, str):
+        params_dict = json.loads(params_dict)  # Parse JSON string back to dict
     
     # Validate params against schema
     ParamsModel = get_params_model(template)
@@ -142,8 +147,8 @@ async def execute_workflow(approval_id: str) -> Dict[str, Any]:
         
         # Update workflow as completed
         await db_execute(
-            "UPDATE workflow_runs SET status = $1, completed_at = NOW(), results = $2 WHERE id = $3",
-            "completed", result, workflow['id']
+            "UPDATE workflow_runs SET status = $1, completed_at = NOW(), results = $2::jsonb WHERE id = $3",
+            "completed", json.dumps(result), workflow['id']  # Convert result to JSON string
         )
         
         return result

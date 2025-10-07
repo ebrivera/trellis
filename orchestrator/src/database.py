@@ -8,6 +8,10 @@ import os
 from typing import List, Dict, Any, Optional
 from contextlib import asynccontextmanager
 import json
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Connection pool (initialized on startup)
 _pool: Optional[asyncpg.Pool] = None
