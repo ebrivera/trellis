@@ -22,7 +22,7 @@ __pycache__/
 
 # orchestration files
 /orchestrator/venv
-/orchestrator/__pycache__/
+**/__pycache__/
 /orchestrator/.pytest_cache/
 /orchestrator/.mypy_cache/
 
