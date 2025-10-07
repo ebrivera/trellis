@@ -23,7 +23,7 @@ class MetricFormula(BaseModel):
         description="Field to group by (e.g., 'initiative_name')"
     )
     format: Optional[Literal["currency", "percent", "number"]] = Field(
-        default="number",
+        default=None,
         description="How to format the result"
     )
 
