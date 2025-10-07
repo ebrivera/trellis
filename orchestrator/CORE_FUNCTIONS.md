@@ -690,27 +690,31 @@ await send_notification(
 
 ### Test Organization
 
+All test files are located in the `tests/` directory:
+
 ```
-test_load_data.py           (7 tests)   - Database loading
-test_filter.py              (16 tests)  - Filtering logic (no DB)
-test_match.py               (15 tests)  - Matching algorithms (no DB)
-test_calculate_metrics.py   (20 tests)  - Metrics calculation (no DB)
-test_send_notification.py   (20 tests)  - Notification queuing (no DB)
-test_integration.py         (5 tests)   - Load + filter integration (DB)
+tests/test_load_data.py           (7 tests)   - Database loading
+tests/test_filter.py              (16 tests)  - Filtering logic (no DB)
+tests/test_match.py               (15 tests)  - Matching algorithms (no DB)
+tests/test_calculate_metrics.py   (20 tests)  - Metrics calculation (no DB)
+tests/test_send_notification.py   (20 tests)  - Notification queuing (no DB)
+tests/test_integration.py         (5 tests)   - Load + filter integration (DB)
 ```
 
 ### Running Tests
 
+**Important**: Run all tests from the `orchestrator/` directory using the venv Python:
+
 ```bash
 # Individual test files (no database required)
-python test_filter.py
-python test_match.py
-python test_calculate_metrics.py
-python test_send_notification.py
+./venv/bin/python tests/test_filter.py
+./venv/bin/python tests/test_match.py
+./venv/bin/python tests/test_calculate_metrics.py
+./venv/bin/python tests/test_send_notification.py
 
 # Database tests (requires running Supabase)
-python test_load_data.py
-python test_integration.py
+./venv/bin/python tests/test_load_data.py
+./venv/bin/python tests/test_integration.py
 ```
 
 ### Testing Without Database
