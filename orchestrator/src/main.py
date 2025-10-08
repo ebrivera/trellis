@@ -264,8 +264,8 @@ async def get_recent_activity():
             template_type,
             status,
             request_text,
-            created_at,
-            completed_at
+            created_at AT TIME ZONE 'UTC' as created_at,
+            completed_at AT TIME ZONE 'UTC' as completed_at
         FROM workflow_runs
         WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
         
@@ -277,14 +277,14 @@ async def get_recent_activity():
             ag.gate_type as template_type,
             ag.status,
             wr.request_text,
-            ag.created_at,
-            ag.approved_at as completed_at
+            ag.created_at AT TIME ZONE 'UTC' as created_at,
+            ag.approved_at AT TIME ZONE 'UTC' as completed_at
         FROM approval_gates ag
         JOIN workflow_runs wr ON ag.workflow_run_id = wr.id
         WHERE ag.created_at >= CURRENT_DATE - INTERVAL '7 days'
         
         ORDER BY created_at DESC
-        LIMIT 10
+        LIMIT 5
     """)
     
     return {"activities": activities}

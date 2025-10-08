@@ -120,12 +120,22 @@ export default function Dashboard() {
     const now = new Date()
     const then = new Date(timestamp)
     const diffMs = now.getTime() - then.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
+    
+    // Handle future timestamps (shouldn't happen but just in case)
+    if (diffMs < 0) return 'just now'
+    
+    const diffSecs = Math.floor(diffMs / 1000)
+    const diffMins = Math.floor(diffSecs / 60)
     const diffHours = Math.floor(diffMins / 60)
     const diffDays = Math.floor(diffHours / 24)
 
+    if (diffSecs < 10) return 'just now'
+    if (diffSecs < 60) return `${diffSecs} seconds ago`
+    if (diffMins === 1) return '1 minute ago'
     if (diffMins < 60) return `${diffMins} minutes ago`
+    if (diffHours === 1) return '1 hour ago'
     if (diffHours < 24) return `${diffHours} hours ago`
+    if (diffDays === 1) return '1 day ago'
     return `${diffDays} days ago`
   }
 
@@ -153,7 +163,7 @@ export default function Dashboard() {
           <h2 className="mb-6 text-2xl font-semibold text-white">Overview</h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {/* Card 1: Pending Approvals */}
-            <Card padding="lg" className="transition-transform hover:scale-105">
+            <Card padding="lg" className="transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]">
               <div className="flex flex-col gap-2">
                 <Clock className="w-10 h-10 text-white" />
                 <h3 className="text-lg font-semibold text-white">
@@ -172,7 +182,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Card 2: Completed Workflows */}
-            <Card padding="lg" className="transition-transform hover:scale-105">
+            <Card padding="lg" className="transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]">
               <div className="flex flex-col gap-2">
                 <BarChart3 className="w-10 h-10 text-white" />
                 <h3 className="text-lg font-semibold text-white">
@@ -188,7 +198,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Card 3: Messages Queued */}
-            <Card padding="lg" className="transition-transform hover:scale-105">
+            <Card padding="lg" className="transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]">
               <div className="flex flex-col gap-2">
                 <MessageSquare className="w-10 h-10 text-white" />
                 <h3 className="text-lg font-semibold text-white">
@@ -202,7 +212,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Card 4: Statistics */}
-            <Card padding="lg" className="transition-transform hover:scale-105">
+            <Card padding="lg" className="transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]">
               <div className="flex flex-col gap-2">
                 <Users className="w-10 h-10 text-white" />
                 <h3 className="text-lg font-semibold text-white">
@@ -230,27 +240,29 @@ export default function Dashboard() {
           <h2 className="mb-6 text-2xl font-semibold text-white">
             Recent Activity
           </h2>
-          <Card className="space-y-4">
+          <Card>  {/* Remove className="space-y-4" */}
             {activityLoading ? (
               <div className="py-8 text-center text-white/60">Loading activities...</div>
             ) : recentActivity?.activities && recentActivity.activities.length > 0 ? (
               recentActivity.activities.map((activity, index) => (
                 <div key={activity.id}>
                   {index > 0 && <Divider />}
-                  <ActivityItem
-                    icon={getActivityIcon(activity)}
-                    title={getActivityTitle(activity)}
-                    time={getTimeAgo(activity.created_at)}
-                    action={
-                      activity.status === 'pending' || activity.status === 'awaiting_approval' ? (
-                        <Link href="/approvals">
-                          <Button variant="ghost" size="sm">
-                            Review
-                          </Button>
-                        </Link>
-                      ) : undefined
-                    }
-                  />
+                  <div className="py-4">  {/* Add padding wrapper */}
+                    <ActivityItem
+                      icon={getActivityIcon(activity)}
+                      title={getActivityTitle(activity)}
+                      time={getTimeAgo(activity.created_at)}
+                      action={
+                        activity.status === 'pending' || activity.status === 'awaiting_approval' ? (
+                          <Link href="/approvals">
+                            <Button variant="ghost" size="sm">
+                              Review
+                            </Button>
+                          </Link>
+                        ) : undefined
+                      }
+                    />
+                  </div>
                 </div>
               ))
             ) : (
@@ -326,9 +338,9 @@ function ActivityItem({
   action?: React.ReactNode
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex items-start gap-3">
-        <div className="mt-1 shrink-0">{icon}</div>
+    <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <div className="shrink-0">{icon}</div>  {/* Removed mt-1 */}
         <div>
           <p className="font-medium text-white">{title}</p>
           <p className="text-sm text-white/50">{time}</p>
