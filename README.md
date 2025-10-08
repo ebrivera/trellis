@@ -1,83 +1,23 @@
-# Trellis
+## Dev setup (npm only)
 
-A modern monorepo with Next.js, Tailwind CSS, and TypeScript.
+**Requirements**
 
-## Structure
+- Node >= 18 (we use v22 fine)
+- npm 9.8.1 (repo-managed via Corepack)
 
+**Install & run**
+
+```bash
+# one-time
+corepack enable || true
+corepack prepare npm@9.8.1 --activate
+
+# fresh install
+rm -rf node_modules apps/web/node_modules
+npm ci --include=dev
+
+# dev
+npm run dev          # runs all workspaces via turbo
+# or just the web app:
+npm run dev -w @trellis/web
 ```
-trellis/
-├── apps/
-│   └── web/                 # Next.js application
-├── packages/
-│   ├── ui/                  # Shared UI components
-│   ├── utils/               # Utility functions
-│   └── types/               # Shared TypeScript types
-├── package.json             # Root package.json with workspaces
-├── turbo.json              # Turbo configuration
-└── tsconfig.json           # Root TypeScript configuration
-```
-
-## Getting Started
-
-1. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-2. Start development server:
-
-   ```bash
-   npm run dev
-   ```
-
-3. Build all packages:
-   ```bash
-   npm run build
-   ```
-
-## Available Scripts
-
-- `npm run dev` - Start all development servers
-- `npm run build` - Build all packages and apps
-- `npm run lint` - Lint all packages
-- `npm run type-check` - Type check all packages
-- `npm run clean` - Clean all build artifacts
-- `npm run format` - Format code with Prettier
-
-## Packages
-
-### @trellis/web
-
-Next.js application with App Router, Tailwind CSS, and TypeScript.
-
-### @trellis/ui
-
-Shared UI components built with React and Tailwind CSS.
-
-### @trellis/utils
-
-Utility functions for common operations.
-
-### @trellis/types
-
-Shared TypeScript type definitions.
-
-## Development
-
-This monorepo uses:
-
-- **Turbo** for build orchestration and caching
-- **npm workspaces** for package management
-- **TypeScript** for type safety
-- **Tailwind CSS** for styling
-- **Prettier** for code formatting
-- **ESLint** for code linting
-
-## Adding New Packages
-
-1. Create a new directory in `packages/`
-2. Add a `package.json` with the `@trellis/` namespace
-3. Update the root `package.json` workspaces if needed
-4. Add TypeScript configuration
-5. Export from the package's `src/index.ts`
