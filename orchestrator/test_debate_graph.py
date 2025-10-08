@@ -24,7 +24,7 @@ async def test_full_orchestration():
     
     # Initial state (just the request)
     initial_state = {
-        'request': "Match volunteers to Sunday morning serving roles based on their skills and availability",
+        'request': "Group volunteers to Sunday morning serving roles based on their skills and availability",
         'agent_initiated': False
     }
     

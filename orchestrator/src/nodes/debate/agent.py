@@ -1,5 +1,5 @@
 """
-orchestrator/src/nodes/debate/agent.py
+./orchestrator/src/nodes/debate/agent.py
 Agent Logic - Core reasoning for debate participation
 Each agent can propose, rebut, and vote independently
 """

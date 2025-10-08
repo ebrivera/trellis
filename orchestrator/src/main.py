@@ -1,13 +1,18 @@
 # orchestrator/src/main.py
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from asyncio import Queue
+import os
+from dotenv import load_dotenv
+import json
 from typing import Optional, Dict, Any, List
 from .database import init_db_pool, close_db_pool, fetch_one, execute
 from .graph import run_orchestration
 from .graph_executor import execute_workflow
-import os
-from dotenv import load_dotenv
+from .graph_streaming import run_orchestration_with_events
+
 
 load_dotenv()
 
@@ -167,6 +172,87 @@ async def decide_approval(approval_id: str, decision: ApprovalDecision):
     else:
         raise HTTPException(status_code=400, detail="Invalid action. Must be 'approve' or 'reject'")
 
+@app.get("/orchestrate/stream")
+async def orchestrate_stream(request: str):
+    """
+    Streaming version of orchestrate endpoint.
+    Sends SSE events as debate progresses in real-time.
+    """
+    
+    async def event_generator():
+        """Generator that yields SSE events in real-time"""
+        import asyncio
+        
+        try:
+            # Create a queue to collect events
+            event_queue = Queue()
+            
+            # Flag to track when orchestration is done
+            orchestration_done = False
+            result = None
+            error = None
+            
+            # Run orchestration in background task
+            async def run_in_background():
+                nonlocal orchestration_done, result, error
+                try:
+                    result = await run_orchestration_with_events(
+                        request,  
+                        [],    
+                        event_queue
+                    )
+                except Exception as e:
+                    error = e
+                finally:
+                    orchestration_done = True
+            
+            # Start background task
+            task = asyncio.create_task(run_in_background())
+            
+            # Yield events as they arrive in queue
+            while not orchestration_done or not event_queue.empty():
+                try:
+                    # Wait for event with timeout to check if done
+                    event = await asyncio.wait_for(event_queue.get(), timeout=0.1)
+                    
+                    # Format and yield as SSE
+                    yield f"event: {event['event']}\n"
+                    yield f"data: {json.dumps(event['data'])}\n\n"
+                    
+                except asyncio.TimeoutError:
+                    # No event available, check if we should continue waiting
+                    if orchestration_done and event_queue.empty():
+                        break
+                    continue
+            
+            # Wait for background task to complete
+            await task
+            
+            # Check for errors
+            if error:
+                raise error
+            
+            # Send final completion event
+            yield f"event: complete\n"
+            yield f"data: {json.dumps({'status': 'success'})}\n\n"
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            
+            # Send error event
+            yield f"event: error\n"
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 if __name__ == "__main__":
     import uvicorn
