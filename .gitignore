@@ -13,6 +13,13 @@ dist/
 build/
 *.tsbuildinfo
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
 # orchestration files
 /orchestrator/venv
 /orchestrator/__pycache__/
@@ -21,6 +28,7 @@ build/
 /orchestrator/test_debate_structure.py
 /orchestrator/test_agent_logic.py
 /orchestrator/test_debate_graph.py
+/orchestrator/test_db_connection.py
 # Environment variables
 .env
 .env.local

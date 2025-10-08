@@ -5,7 +5,7 @@ Examples: giving trends, attendance patterns, budget analysis
 
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
-from ..schemas import EntitySource, NotificationConfig, TemplateType
+from ..schemas import EntityQuery, NotificationConfig, TemplateType
 
 
 class MetricFormula(BaseModel):
@@ -23,7 +23,7 @@ class MetricFormula(BaseModel):
         description="Field to group by (e.g., 'initiative_name')"
     )
     format: Optional[Literal["currency", "percent", "number"]] = Field(
-        default="number",
+        default=None,
         description="How to format the result"
     )
 
@@ -51,8 +51,8 @@ class FlagCondition(BaseModel):
 class AnalysisParams(BaseModel):
     """Parameters for the Analysis template"""
     template: Literal[TemplateType.ANALYSIS] = TemplateType.ANALYSIS
-    sources: List[EntitySource] = Field(
-        ..., 
+    sources: List[EntityQuery] = Field(
+        ...,
         description="Data sources to analyze"
     )
     join_on: Optional[str] = Field(
@@ -60,7 +60,7 @@ class AnalysisParams(BaseModel):
         description="Field to join sources on (e.g., 'initiative_name')"
     )
     metrics: List[MetricFormula] = Field(
-        ..., 
+        ...,
         description="Metrics to calculate"
     )
     flags: Optional[List[FlagCondition]] = Field(
@@ -74,7 +74,7 @@ class AnalysisParams(BaseModel):
 
     @field_validator('sources')
     @classmethod
-    def validate_multiple_sources(cls, v: List[EntitySource]) -> List[EntitySource]:
+    def validate_multiple_sources(cls, v: List[EntityQuery]) -> List[EntityQuery]:
         if len(v) < 1:
             raise ValueError("Analysis requires at least one data source")
         return v

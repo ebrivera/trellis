@@ -5,7 +5,7 @@ Examples: track first-time visitors, flag lapsed donors
 
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
-from ..schemas import EntitySource, Channel, TemplateType
+from ..schemas import EntityQuery, Channel, TemplateType
 
 
 class TimeCondition(BaseModel):
@@ -74,8 +74,8 @@ class OptionalAction(BaseModel):
 class MonitoringParams(BaseModel):
     """Parameters for the Monitoring template"""
     template: Literal[TemplateType.MONITORING] = TemplateType.MONITORING
-    source: EntitySource = Field(
-        ..., 
+    source: EntityQuery = Field(
+        ...,
         description="Data to monitor (visitors, donors)"
     )
     condition: TimeCondition = Field(
