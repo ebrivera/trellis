@@ -25,10 +25,6 @@ __pycache__/
 /orchestrator/__pycache__/
 /orchestrator/.pytest_cache/
 /orchestrator/.mypy_cache/
-/orchestrator/test_debate_structure.py
-/orchestrator/test_agent_logic.py
-/orchestrator/test_debate_graph.py
-/orchestrator/test_db_connection.py
 # Environment variables
 .env
 .env.local
