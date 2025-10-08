@@ -248,6 +248,48 @@ async def get_dashboard_overview():
     }
 
 
+# ============================================================================
+# RECENT ACTIVITY (DASHBOARD)
+# ============================================================================
+
+@app.get("/dashboard/recent-activity")
+async def get_recent_activity():
+    from .database import fetch_all
+    
+    # Get recent workflow runs, approval decisions, and assignments
+    activities = await fetch_all("""
+        SELECT 
+            'workflow' as activity_type,
+            id,
+            template_type,
+            status,
+            request_text,
+            created_at,
+            completed_at
+        FROM workflow_runs
+        WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+        
+        UNION ALL
+        
+        SELECT 
+            'approval' as activity_type,
+            ag.id,
+            ag.gate_type as template_type,
+            ag.status,
+            wr.request_text,
+            ag.created_at,
+            ag.decided_at as completed_at
+        FROM approval_gates ag
+        JOIN workflow_runs wr ON ag.workflow_run_id = wr.id
+        WHERE ag.created_at >= CURRENT_DATE - INTERVAL '7 days'
+        
+        ORDER BY created_at DESC
+        LIMIT 10
+    """)
+    
+    return {"activities": activities}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

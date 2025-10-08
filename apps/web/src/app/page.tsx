@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
-import { Clock, BarChart3, MessageSquare, Users, Plus, CheckCircle2, Download, Target, Upload } from 'lucide-react'
+import { Clock, BarChart3, MessageSquare, Users, Plus, CheckCircle2, Download, Target, Upload, XCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 interface OverviewData {
@@ -16,9 +16,25 @@ interface OverviewData {
   }
 }
 
+interface Activity {
+  activity_type: string
+  id: string
+  template_type: string
+  status: string
+  request_text: string
+  created_at: string
+  completed_at: string | null
+}
+
+interface RecentActivityData {
+  activities: Activity[]
+}
+
 export default function Dashboard() {
   const [overviewData, setOverviewData] = useState<OverviewData | null>(null)
+  const [recentActivity, setRecentActivity] = useState<RecentActivityData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activityLoading, setActivityLoading] = useState(true)
 
   useEffect(() => {
     const fetchOverview = async () => {
@@ -33,8 +49,59 @@ export default function Dashboard() {
       }
     }
 
+    const fetchRecentActivity = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/dashboard/recent-activity')
+        const data = await response.json()
+        setRecentActivity(data)
+      } catch (error) {
+        console.error('Failed to fetch recent activity:', error)
+      } finally {
+        setActivityLoading(false)
+      }
+    }
+
     fetchOverview()
+    fetchRecentActivity()
   }, [])
+
+  const getActivityIcon = (activity: Activity) => {
+    if (activity.status === 'completed') {
+      return <CheckCircle2 className="w-6 h-6 text-green-400" />
+    } else if (activity.status === 'pending' || activity.status === 'awaiting_approval') {
+      return <Clock className="w-6 h-6 text-yellow-400" />
+    } else if (activity.status === 'rejected' || activity.status === 'failed') {
+      return <XCircle className="w-6 h-6 text-red-400" />
+    } else if (activity.activity_type === 'workflow') {
+      return <BarChart3 className="w-6 h-6 text-blue-400" />
+    } else {
+      return <Target className="w-6 h-6 text-purple-400" />
+    }
+  }
+
+  const getActivityTitle = (activity: Activity) => {
+    const typeLabel = activity.activity_type === 'workflow' ? 'Workflow' : 'Approval'
+    const statusLabel = activity.status === 'pending' ? ' (Pending)' : 
+                       activity.status === 'awaiting_approval' ? ' (Awaiting Approval)' :
+                       activity.status === 'completed' ? ' Completed' :
+                       activity.status === 'rejected' ? ' Rejected' : ''
+    
+    const requestPreview = activity.request_text?.slice(0, 50) || activity.template_type
+    return `${typeLabel}${statusLabel}: ${requestPreview}${activity.request_text?.length > 50 ? '...' : ''}`
+  }
+
+  const getTimeAgo = (timestamp: string) => {
+    const now = new Date()
+    const then = new Date(timestamp)
+    const diffMs = now.getTime() - then.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffMins < 60) return `${diffMins} minutes ago`
+    if (diffHours < 24) return `${diffHours} hours ago`
+    return `${diffDays} days ago`
+  }
 
   return (
     <main className="min-h-screen px-6 pt-32 pb-20">
@@ -138,42 +205,31 @@ export default function Dashboard() {
             Recent Activity
           </h2>
           <Card className="space-y-4">
-            <ActivityItem
-              icon={<CheckCircle2 className="w-6 h-6 text-green-400" />}
-              title="Activity 1"
-              time="2 hours ago"
-            />
-            <Divider />
-            <ActivityItem
-              icon={<Clock className="w-6 h-6 text-yellow-400" />}
-              title="Activity 2 (Pending Approval)"
-              time="5 hours ago"
-              action={
-                <Link href="/approvals">
-                  <Button variant="ghost" size="sm">
-                    Review
-                  </Button>
-                </Link>
-              }
-            />
-            <Divider />
-            <ActivityItem
-              icon={<BarChart3 className="w-6 h-6 text-blue-400" />}
-              title="Activity 3"
-              time="1 day ago"
-            />
-            <Divider />
-            <ActivityItem
-              icon={<Download className="w-6 h-6 text-purple-400" />}
-              title="Activity 4"
-              time="2 days ago"
-            />
-            <Divider />
-            <ActivityItem
-              icon={<Target className="w-6 h-6 text-pink-400" />}
-              title="Activity 5"
-              time="3 days ago"
-            />
+            {activityLoading ? (
+              <div className="py-8 text-center text-white/60">Loading activities...</div>
+            ) : recentActivity?.activities && recentActivity.activities.length > 0 ? (
+              recentActivity.activities.map((activity, index) => (
+                <div key={activity.id}>
+                  {index > 0 && <Divider />}
+                  <ActivityItem
+                    icon={getActivityIcon(activity)}
+                    title={getActivityTitle(activity)}
+                    time={getTimeAgo(activity.created_at)}
+                    action={
+                      activity.status === 'pending' || activity.status === 'awaiting_approval' ? (
+                        <Link href="/approvals">
+                          <Button variant="ghost" size="sm">
+                            Review
+                          </Button>
+                        </Link>
+                      ) : undefined
+                    }
+                  />
+                </div>
+              ))
+            ) : (
+              <div className="py-8 text-center text-white/60">No recent activity</div>
+            )}
           </Card>
         </section>
 
