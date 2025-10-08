@@ -1,17 +1,32 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "jsx": "preserve",
+    "noEmit": true,
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@trellis/ui": ["../../packages/ui/src"],
-      "@trellis/utils": ["../../packages/utils/src"],
-      "@trellis/types": ["../../packages/types/src"]
-    }
+      "@/*": [
+        "./src/*"
+      ],
+      "@trellis/ui/*": [
+        "./src/components/ui/*"
+      ],
+      "@trellis/utils/*": [
+        "../../packages/utils/src/*"
+      ],
+      "@trellis/types/*": [
+        "../../packages/types/src/*"
+      ]
+    },
+    "allowJs": true,
+    "incremental": true,
+    "module": "esnext",
+    "esModuleInterop": true,
+    "isolatedModules": true
   },
   "include": [
     "next-env.d.ts",
