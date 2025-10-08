@@ -1,4 +1,5 @@
 """
+./orchestrator/src/schemas.py
 Shared Pydantic schemas used across all workflow templates.
 Template-specific models are in src/templates/
 """

@@ -32,6 +32,13 @@ AGENT_CONFIGS: List[AgentConfig] = [
     )
 ]
 
+MODERATOR_CONFIG = AgentConfig(
+    name="Moderator",
+    persona_file="moderator.txt",
+    emoji="⚖️",
+    role_description="Neutral arbiter for tie-breaking"
+)
+
 
 def get_agent_configs() -> List[AgentConfig]:
     """Get list of all agent configurations"""
@@ -53,11 +60,17 @@ def get_agent_by_name(name: str) -> AgentConfig:
             return agent
     raise ValueError(f"Agent '{name}' not found in AGENT_CONFIGS")
 
+def get_moderator_config() -> AgentConfig:
+    """Get moderator config for tie-breaking"""
+    return MODERATOR_CONFIG
+
 
 # Export key functions for external use
 __all__ = [
     'AGENT_CONFIGS',
+    'MODERATOR_CONFIG',
     'get_agent_configs',
+    'get_moderator_config',
     'load_persona',
     'get_agent_by_name',
 ]
