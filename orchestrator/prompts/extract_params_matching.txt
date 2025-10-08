@@ -2,37 +2,60 @@ You are extracting parameters for a MATCHING workflow.
 
 The user wants to assign/match entities from a SOURCE to a TARGET.
 
-Available data in the database:
-- people table: volunteers, visitors, donors, mentors, mentees (columns: name, email, phone, person_type, interests[], availability_days[], capacity, metadata)
-- groups table: roles, small groups, initiatives (columns: name, group_type, requirements[], capacity, current_count, leader_id, metadata)
+**IMPORTANT: Use ONLY these actual database fields:**
+
+PEOPLE TABLE FIELDS:
+- interests (array): e.g., ['music', 'youth', 'teaching']
+- availability_days (array): e.g., ['Sun', 'Mon', 'Wed']
+- capacity (integer): for mentors/leaders
+- person_type: volunteer, mentor, mentee, visitor, donor
+- zip (in metadata): location
+
+GROUPS TABLE FIELDS:
+- requirements (array): skills/interests needed
+- capacity (integer): max members
+- group_type: role, small_group, initiative
+
+**Field Mapping Rules:**
+- When users say "skills", "abilities", "talents", or "experience" → use "interests" field
+- When users say "availability" or "when they're free" → use "availability_days" field
+- When users say "roles" or "positions" → use group_type = 'role'
+
+---
 
 Your job is to extract:
 
 1. SOURCE - Which entities to assign?
    - entity_type: "people" or "groups"
-   - What person_type to filter? (volunteer, mentor, mentee, visitor, donor)
-   - Any pre-filters? (e.g., "only those available on Sunday")
+   - subtype: What person_type? (volunteer, mentor, mentee, visitor, donor)
+   - filters: Array of filter conditions (optional)
 
 2. TARGET - What are we assigning them to?
    - entity_type: "people" or "groups"  
-   - What group_type to filter? (role, small_group, initiative)
-   - Any constraints?
+   - subtype: What group_type or person_type? (role, small_group, initiative, mentor, etc.)
+   - filters: Array of filter conditions (optional)
 
 3. MATCH_STRATEGY - How to match?
    - capacity_balanced: Balance load across targets, respect capacity limits
    - interest_overlap: Match based on interests/requirements similarity
    - proximity: Match based on location (zip codes)
 
-4. MATCH_FIELDS - What fields to score on?
-   - Common fields: interests, availability_days, zip (in metadata)
-   - Weights should sum to 1.0
+4. MATCH_FIELDS - What fields to score on? **USE ACTUAL FIELD NAMES ONLY**
+   - score_on: Array of field names (interests, availability_days, zip)
+   - weights: Array of objects with field and weight (must sum to 1.0)
 
 5. CONSTRAINTS
-   - max_per_target: Which field defines capacity? (capacity, current_count)
-   - min_score_threshold: Minimum match quality (0-1)
+   - max_per_target: Which field defines capacity? (usually "capacity")
+   - respect_preferences: boolean (default true)
+   - min_score_threshold: Minimum match quality 0-1
+     * IMPORTANT: Keep this LOW or null to allow flexible matching
+     * Recommended: null (no threshold) or 0.3 (lenient matching)
+     * Only set to 0.6+ if user explicitly says "high quality matches only"
+     * Setting >0.5 will often result in ZERO matches due to strict scoring
+     * Most requests should use null or omit this field entirely
 
 6. NOTIFICATIONS - Who gets notified after approval?
-   - recipient_type: "source" (the people being assigned), "target_owners" (leaders), or "both"
+   - recipient_type: "source", "target", or "target_owners"
    - channel: "sms" or "email"
    - template: Handlebars template with {{variables}}
 
@@ -40,42 +63,51 @@ Your job is to extract:
 
 IMPORTANT RULES:
 
-- Use person_type filters, NOT file names (e.g., "person_type = 'volunteer'", not "volunteers.csv")
-- Use group_type filters for targets (e.g., "group_type = 'role'")
+- **CRITICAL: Only use these field names: interests, availability_days, requirements, capacity, zip**
+- **DO NOT use: skills, abilities, experience, talents - map these to "interests"**
+- Use person_type for source/target subtype when entity_type is "people"
+- Use group_type for source/target subtype when entity_type is "groups"
 - For filters, use SQL-like syntax: "availability_days @> ARRAY['Sun']" for array contains
-- Default strategy is capacity_balanced
+- Weights must be an array of objects: [{"field": "interests", "weight": 0.6}, ...]
+- Weights must sum to 1.0
 - Always include at least one notification
 
 ---
 
 EXAMPLES:
 
-Request: "Assign volunteers to Sunday roles based on interests"
+Request: "Assign volunteers to Sunday roles based on interests and availability"
 Output:
 {
   "template": "matching",
   "source": {
     "entity_type": "people",
-    "filters": ["person_type = 'volunteer'", "availability_days @> ARRAY['Sun']"]
+    "subtype": "volunteer",
+    "filters": []
   },
   "target": {
     "entity_type": "groups",
-    "filters": ["group_type = 'role'"]
+    "subtype": "role",
+    "filters": []
   },
   "match_strategy": "interest_overlap",
   "match_fields": {
-    "score_on": ["interests"],
-    "weights": {"interests": 1.0}
+    "score_on": ["interests", "availability_days"],
+    "weights": [
+      {"field": "interests", "weight": 0.6},
+      {"field": "availability_days", "weight": 0.4}
+    ]
   },
   "constraints": {
     "max_per_target": "capacity",
-    "respect_preferences": true
+    "respect_preferences": true,
+    "min_score_threshold": null
   },
   "notifications": [
     {
       "recipient_type": "source",
       "channel": "sms",
-      "template": "You're assigned to {{target_name}}! Contact {{leader_name}} at {{leader_phone}}."
+      "template": "You're assigned to {{target_name}}! Contact the leader for details."
     }
   ]
 }
@@ -86,19 +118,25 @@ Output:
   "template": "matching",
   "source": {
     "entity_type": "people",
-    "filters": ["person_type = 'mentee'"]
+    "subtype": "mentee",
+    "filters": []
   },
   "target": {
     "entity_type": "people",
-    "filters": ["person_type = 'mentor'"]
+    "subtype": "mentor",
+    "filters": []
   },
   "match_strategy": "interest_overlap",
   "match_fields": {
     "score_on": ["interests"],
-    "weights": {"interests": 1.0}
+    "weights": [
+      {"field": "interests", "weight": 1.0}
+    ]
   },
   "constraints": {
-    "max_per_target": "capacity"
+    "max_per_target": "capacity",
+    "respect_preferences": true,
+    "min_score_threshold": null
   },
   "notifications": [
     {
@@ -107,9 +145,56 @@ Output:
       "template": "Your mentor is {{target_name}}. Phone: {{target_phone}}"
     },
     {
-      "recipient_type": "target_owners",
+      "recipient_type": "target",
       "channel": "sms",
       "template": "You're paired with {{source_name}}. Their interests: {{source_interests}}"
+    }
+  ]
+}
+
+Request: "Match volunteers with skills in music to worship team roles"
+Output:
+{
+  "template": "matching",
+  "source": {
+    "entity_type": "people",
+    "subtype": "volunteer",
+    "filters": [
+      {
+        "field": "interests",
+        "operator": "contains",
+        "value": "music"
+      }
+    ]
+  },
+  "target": {
+    "entity_type": "groups",
+    "subtype": "role",
+    "filters": [
+      {
+        "field": "name",
+        "operator": "contains",
+        "value": "worship"
+      }
+    ]
+  },
+  "match_strategy": "interest_overlap",
+  "match_fields": {
+    "score_on": ["interests"],
+    "weights": [
+      {"field": "interests", "weight": 1.0}
+    ]
+  },
+  "constraints": {
+    "max_per_target": "capacity",
+    "respect_preferences": true,
+    "min_score_threshold": null
+  },
+  "notifications": [
+    {
+      "recipient_type": "source",
+      "channel": "sms",
+      "template": "You're assigned to {{target_name}}!"
     }
   ]
 }

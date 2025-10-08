@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from .database import init_db_pool, close_db_pool, fetch_one, execute
-from .graph import orchestrate_request, execute_workflow
+from .graph import run_orchestration
+from .graph_executor import execute_workflow
 import os
 from dotenv import load_dotenv
 
@@ -69,13 +70,12 @@ def root():
 @app.post("/orchestrate", response_model=OrchestrateResponse)
 async def orchestrate(request: OrchestrateRequest):
     """
-    Main orchestration endpoint: NL request → classify → extract → approval gate.
-    
+    Main orchestration endpoint: Multi-agent debate → approval gate.
     Frontend calls this from chat interface.
-    Returns approval_id for frontend to show approval UI.
     """
     try:
-        result = await orchestrate_request(
+        # Run the full debate orchestration
+        result = await run_orchestration(
             request.request,
             request.available_files or []
         )
@@ -83,13 +83,15 @@ async def orchestrate(request: OrchestrateRequest):
         return OrchestrateResponse(
             approvalId=result['approval_id'],
             workflowId=result['workflow_id'],
-            template=result['template'],
-            params=result['params'],
+            template=result['template'].value,  # Convert enum to string
+            params=result['debate_state']['params'],  # Params are nested in debate_state
             preview=result.get('preview', {}),
             clarifications=result.get('clarifications', [])
         )
     
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

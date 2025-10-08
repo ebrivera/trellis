@@ -171,8 +171,22 @@ def _score_single_field(
     Returns:
         Score between 0.0 and 1.0
     """
+    
+    field_mapping = {
+        'interests': ['interests', 'requirements'],  # volunteer.interests ↔ role.requirements
+        'requirements': ['interests', 'requirements'],
+    }
+    
     source_val = source.get(field_name)
     target_val = target.get(field_name)
+
+    # If target doesn't have the field, try mapped alternatives
+    if target_val is None and field_name in field_mapping:
+        for alt_field in field_mapping[field_name]:
+            if alt_field != field_name:  # Don't retry the same field
+                target_val = target.get(alt_field)
+                if target_val is not None:
+                    break
 
     # Handle missing values (use try/except to avoid issues with arrays)
     try:

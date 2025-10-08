@@ -5,6 +5,9 @@ Main Orchestration Graph - Classifier → Multi-Agent Debate → Executor
 
 from typing import Dict, Any
 from langgraph.graph import StateGraph, END, START
+from typing import Dict, Any
+import json
+from uuid import uuid4
 
 from .nodes.classifier import classify_template
 from .nodes.debate.orchestrator import (
@@ -16,6 +19,8 @@ from .nodes.debate.agent import execute_agent_action
 from .nodes.debate.voting import tally_votes_and_determine_winner
 from .nodes.debate.extract_params import extract_params_from_winner
 from .nodes.debate import get_agent_configs
+from .graph_executor import generate_preview
+from .database import insert_one, execute as db_execute
 
 
 # ============================================================================
@@ -63,6 +68,70 @@ def execute_round_3(state: Dict[str, Any]) -> Dict[str, Any]:
     
     return state
 
+# ============================================================================
+# ADD APPROVAL GATE CREATION
+# ============================================================================
+
+async def create_approval_gate_node(state: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Create workflow_run and approval_gate in database.
+    Generates preview of what will happen.
+    Returns approval_id for frontend.
+    """
+    workflow_id = str(uuid4())
+    approval_id = str(uuid4())
+    
+    debate_state = state['debate_state']
+    params = debate_state['params']
+    template = state['template']
+    
+    # Create workflow_run
+    await insert_one("workflow_runs", {
+        "id": workflow_id,
+        "template_type": template.value,
+        "status": "awaiting_approval",
+        "request_text": state['request'],
+        "extracted_params": json.dumps(params)
+    })
+    
+    # Generate preview (dry-run execution)
+    preview = await generate_preview(template, params, workflow_id)
+    
+    # Create approval_gate
+    await insert_one("approval_gates", {
+        "id": approval_id,
+        "workflow_run_id": workflow_id,
+        "gate_type": "assignments",
+        "status": "pending",
+        "preview_data": json.dumps(preview),
+        "metrics": json.dumps({
+            "debate_vote_tally": debate_state['vote_tally'],
+            "winning_agent": debate_state['winning_agent']
+        })
+    })
+    
+    # Add to state for API response
+    state['approval_id'] = approval_id
+    state['workflow_id'] = workflow_id
+    state['preview'] = preview
+    
+    print("\n" + "="*80)
+    print("✅ APPROVAL GATE CREATED")
+    print("="*80)
+    print(f"Approval ID: {approval_id}")
+    print(f"Workflow ID: {workflow_id}")
+
+    # Better preview display
+    if 'proposed_assignments' in preview:
+        print(f"Preview: {preview['proposed_assignments']} proposed assignments")
+    elif 'flagged_count' in preview:
+        print(f"Preview: {preview['flagged_count']} flagged entities")
+    else:
+        print(f"Preview: {preview.get('entities_analyzed', 0)} entities analyzed")
+
+    print("="*80 + "\n")
+    
+    return state
 
 # ============================================================================
 # BUILD MAIN ORCHESTRATOR GRAPH
@@ -74,9 +143,8 @@ def create_orchestrator_graph():
     
     Flow:
     START → classifier → initialize_debate → round_1 → advance_2 → round_2 
-          → advance_3 → round_3 → tally_votes → extract_params → END
-    
-    Future: Add executor node after extract_params
+          → advance_3 → round_3 → tally_votes → extract_params 
+          → create_approval_gate → END
     """
     
     graph = StateGraph(dict)
@@ -91,6 +159,7 @@ def create_orchestrator_graph():
     graph.add_node("round_3_voting", execute_round_3)
     graph.add_node("tally_votes", tally_votes_and_determine_winner)
     graph.add_node("extract_params", extract_params_from_winner)
+    graph.add_node("create_approval_gate", create_approval_gate_node)  # NEW
     
     # Define linear flow
     graph.add_edge(START, "classifier")
@@ -102,11 +171,8 @@ def create_orchestrator_graph():
     graph.add_edge("advance_to_round_3", "round_3_voting")
     graph.add_edge("round_3_voting", "tally_votes")
     graph.add_edge("tally_votes", "extract_params")
-    graph.add_edge("extract_params", END)
-    
-    # TODO: Add executor node after extract_params
-    # graph.add_edge("extract_params", "executor")
-    # graph.add_edge("executor", END)
+    graph.add_edge("extract_params", "create_approval_gate")  # NEW
+    graph.add_edge("create_approval_gate", END)  # NEW
     
     return graph.compile()
 
