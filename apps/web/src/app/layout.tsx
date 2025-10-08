@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import Plasma from '../components/layout/Background'
+// import Plasma from '../components/layout/Background'
 import Navbar from '../components/layout/Navbar'
 import './globals.css'
 
@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Plasma />
+        {/* <Plasma /> */}
         <Navbar />
         {children}
       </body>

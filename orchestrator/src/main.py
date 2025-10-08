@@ -167,6 +167,86 @@ async def decide_approval(approval_id: str, decision: ApprovalDecision):
     else:
         raise HTTPException(status_code=400, detail="Invalid action. Must be 'approve' or 'reject'")
 
+# ============================================================================
+# DASHBOARD OVERVIEW
+# ============================================================================
+
+@app.get("/dashboard/overview")
+async def get_dashboard_overview():
+    """
+    Get all overview card data in one call.
+    
+    Returns:
+        - card1: Pending Approvals count
+        - card2: Completed Workflows (last 7 days)
+        - card3: Messages Queued count
+        - card4: Total statistics (messages sent, workflows run, assignments made)
+    """
+    from .database import fetch_one
+    
+    # Card 1: Pending Approvals
+    card1 = await fetch_one(
+        "SELECT COUNT(*) as count FROM approval_gates WHERE status = 'pending'"
+    )
+    
+    # Card 2: Completed Workflows (Last 7 Days)
+    card2 = await fetch_one(
+        "SELECT COUNT(*) as count FROM workflow_runs "
+        "WHERE status = 'completed' "
+        "AND completed_at >= CURRENT_DATE - INTERVAL '7 days'"
+    )
+    
+    # Card 3: Messages Queued
+    card3 = await fetch_one(
+        "SELECT COUNT(*) as count FROM messages WHERE status = 'queued'"
+    )
+    
+    # Card 4: Statistics (3 metrics)
+    total_messages_sent = await fetch_one(
+        "SELECT COUNT(*) as count FROM messages WHERE status = 'sent'"
+    )
+    
+    total_workflows = await fetch_one(
+        "SELECT COUNT(*) as count FROM workflow_runs"
+    )
+    
+    total_assignments = await fetch_one(
+        "SELECT COUNT(*) as count FROM assignments"
+    )
+    
+    return {
+        "card1": {
+            "label": "Pending Approvals",
+            "value": card1['count']
+        },
+        "card2": {
+            "label": "Completed Workflows",
+            "sublabel": "Last 7 Days",
+            "value": card2['count']
+        },
+        "card3": {
+            "label": "Messages Queued",
+            "value": card3['count']
+        },
+        "card4": {
+            "label": "Statistics",
+            "stats": [
+                {
+                    "label": "Messages Sent",
+                    "value": total_messages_sent['count']
+                },
+                {
+                    "label": "Workflows Run",
+                    "value": total_workflows['count']
+                },
+                {
+                    "label": "Assignments Made",
+                    "value": total_assignments['count']
+                }
+            ]
+        }
+    }
+
 
 if __name__ == "__main__":
     import uvicorn
