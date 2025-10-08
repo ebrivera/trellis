@@ -8,7 +8,7 @@ TRUNCATE TABLE audit_log, approval_gates, messages, assignments, gifts, workflow
 -- USE CASE 1: VOLUNTEER MATCHING
 -- ============================================
 
--- Insert 50 volunteers with realistic data
+-- Insert 100 volunteers with realistic data
 INSERT INTO people (external_id, name, email, phone, person_type, interests, availability_days, metadata) VALUES
 ('V001', 'John Smith', 'john.smith@email.com', '555-0101', 'volunteer', ARRAY['youth', 'teaching'], ARRAY['Sun', 'Wed'], '{"years_experience": 3}'),
 ('V002', 'Sarah Johnson', 'sarah.j@email.com', '555-0102', 'volunteer', ARRAY['music', 'worship'], ARRAY['Sun'], '{"instrument": "guitar"}'),
@@ -60,6 +60,56 @@ INSERT INTO people (external_id, name, email, phone, person_type, interests, ava
 ('V048', 'Stephanie Bailey', 'sbailey@email.com', '555-0148', 'volunteer', ARRAY['children', 'teaching'], ARRAY['Sun', 'Wed'], '{}'),
 ('V049', 'Jacob Rivera', 'jrivera@email.com', '555-0149', 'volunteer', ARRAY['youth', 'mentoring'], ARRAY['Sun', 'Thu'], '{}'),
 ('V050', 'Virginia Cooper', 'vcooper@email.com', '555-0150', 'volunteer', ARRAY['admin', 'communication'], ARRAY['Sun', 'Mon', 'Fri'], '{}');
+('V051', 'Ethan Brooks', 'ethan.brooks@email.com', '555-0151', 'volunteer', ARRAY['audio_engineering', 'djing'], ARRAY['Sat', 'Sun'], '{"gear_owned": "controller"}'),
+('V052', 'Priya Shah', 'priya.shah@email.com', '555-0152', 'volunteer', ARRAY['lighting_design', 'stage_cues'], ARRAY['Fri', 'Sat', 'Sun'], '{"certification": "LightingPro"}'),
+('V053', 'Marcus Lee', 'marcus.lee@email.com', '555-0153', 'volunteer', ARRAY['video_directing', 'drone_videography'], ARRAY['Wed', 'Sat'], '{"years_experience": 4}'),
+('V054', 'Chloe Ramirez', 'chloe.ramirez@email.com', '555-0154', 'volunteer', ARRAY['stage_management', 'set_design'], ARRAY['Thu', 'Sun'], '{"preferred_service": "9am"}'),
+('V055', 'Liam Chen', 'liam.chen@email.com', '555-0155', 'volunteer', ARRAY['podcast_production', 'live_stream_mix'], ARRAY['Tue', 'Thu', 'Sun'], '{"software": "Ableton"}'),
+('V056', 'Harper Collins', 'harper.collins@email.com', '555-0156', 'volunteer', ARRAY['sign_language', 'welcome_team'], ARRAY['Sat', 'Sun'], '{"certification": "ASL Level 2"}'),
+('V057', 'Jordan Blake', 'jordan.blake@email.com', '555-0157', 'volunteer', ARRAY['audio_equipment', 'maintenance'], ARRAY['Fri', 'Sun', 'Mon'], '{"tech_specialty": "rack_wiring"}'),
+('V058', 'Alicia Gomez', 'alicia.gomez@email.com', '555-0158', 'volunteer', ARRAY['creative_media', 'graphic_animation'], ARRAY['Wed', 'Fri', 'Sun'], '{"design_tools": "AfterEffects"}'),
+('V059', 'Noah Patterson', 'noah.patterson@email.com', '555-0159', 'volunteer', ARRAY['stagecraft', 'rigging'], ARRAY['Sat', 'Mon'], '{"safety_certified": true}'),
+('V060', 'Gabriella Flores', 'gabriella.flores@email.com', '555-0160', 'volunteer', ARRAY['djing', 'youth_events'], ARRAY['Fri', 'Sat'], '{"focus": "teen_outreach"}'),
+('V061', 'Andre Watkins', 'andre.watkins@email.com', '555-0161', 'volunteer', ARRAY['immersive_audio', 'soundboard'], ARRAY['Thu', 'Sat', 'Sun'], '{"preferred_room": "auditorium"}'),
+('V062', 'Mei Lin', 'mei.lin@email.com', '555-0162', 'volunteer', ARRAY['camera_ops', 'photography'], ARRAY['Tue', 'Wed', 'Sun'], '{"equipment": "mirrorless"}'),
+('V063', 'Sienna Park', 'sienna.park@email.com', '555-0163', 'volunteer', ARRAY['projection_mapping', 'stage_props'], ARRAY['Mon', 'Thu', 'Sat'], '{"art_background": "set_painting"}'),
+('V064', 'Omar Hassan', 'omar.hassan@email.com', '555-0164', 'volunteer', ARRAY['broadcast_mix', 'wired_networks'], ARRAY['Wed', 'Fri', 'Sun'], '{"network_certified": true}'),
+('V065', 'Natalie Brooks', 'natalie.brooks@email.com', '555-0165', 'volunteer', ARRAY['audio_editing', 'spoken_word'], ARRAY['Tue', 'Fri', 'Sun'], '{"mentor_interest": "creative_arts"}'),
+('V066', 'Felix Turner', 'felix.turner@email.com', '555-0166', 'volunteer', ARRAY['set_construction', 'woodworking'], ARRAY['Mon', 'Wed', 'Sat'], '{"tool_certification": "sawstop_training"}'),
+('V067', 'Yara Mendes', 'yara.mendes@email.com', '555-0167', 'volunteer', ARRAY['lighting_board', 'color_theory'], ARRAY['Thu', 'Fri', 'Sun'], '{"favorite_role": "evening_service"}'),
+('V068', 'Devon Pierce', 'devon.pierce@email.com', '555-0168', 'volunteer', ARRAY['special_fx_safety', 'stage_management'], ARRAY['Sat', 'Sun'], '{"safety_certified": "NFPA"}'),
+('V069', 'Haley Nguyen', 'haley.nguyen@email.com', '555-0169', 'volunteer', ARRAY['storytelling', 'podcast_hosting'], ARRAY['Mon', 'Tue', 'Sun'], '{"podcast_experience_years": 2}'),
+('V070', 'Darius Cole', 'darius.cole@email.com', '555-0170', 'volunteer', ARRAY['audio_equipment', 'synth_programming'], ARRAY['Fri', 'Sat', 'Sun'], '{"gear_owned": "modular_synth"}'),
+('V071', 'Isaiah Moore', 'isaiah.moore@email.com', '555-0171', 'volunteer', ARRAY['live_captioning', 'broadcast_mix'], ARRAY['Sun', 'Mon', 'Wed'], '{"captioning_cert": "TypeWell"}'),
+('V072', 'Kayla Stone', 'kayla.stone@email.com', '555-0172', 'volunteer', ARRAY['event_photography', 'social_storytelling'], ARRAY['Fri', 'Sat'], '{"preferred_medium": "mirrorless"}'),
+('V073', 'Logan Ruiz', 'logan.ruiz@email.com', '555-0173', 'volunteer', ARRAY['led_wall_ops', 'lighting_walkthroughs'], ARRAY['Thu', 'Sun'], '{"rigging_clearance": true}'),
+('V074', 'Sasha Patel', 'sasha.patel@email.com', '555-0174', 'volunteer', ARRAY['audio_post', 'interview_directing'], ARRAY['Tue', 'Wed', 'Thu'], '{"software": "Pro Tools"}'),
+('V075', 'Troy Bennett', 'troy.bennett@email.com', '555-0175', 'volunteer', ARRAY['mobile_studio', 'equipment_inventory'], ARRAY['Mon', 'Sat'], '{"warehouse_badge": true}'),
+('V076', 'Mila Ortiz', 'mila.ortiz@email.com', '555-0176', 'volunteer', ARRAY['creative_writing', 'announcement_scripts'], ARRAY['Tue', 'Fri'], '{"copy_style": "conversational"}'),
+('V077', 'Keon Rivers', 'keon.rivers@email.com', '555-0177', 'volunteer', ARRAY['youth_djing', 'beat_production'], ARRAY['Fri', 'Sun'], '{"mentor_interest": "teen_media"}'),
+('V078', 'Alina Novak', 'alina.novak@email.com', '555-0178', 'volunteer', ARRAY['lighting_ops', 'color_grading'], ARRAY['Wed', 'Sat'], '{"lighting_console": "MA3"}'),
+('V079', 'Jonah Barrett', 'jonah.barrett@email.com', '555-0179', 'volunteer', ARRAY['podcast_editing', 'voiceover'], ARRAY['Mon', 'Thu', 'Sun'], '{"microphone_preference": "RE20"}'),
+('V080', 'Riley Summers', 'riley.summers@email.com', '555-0180', 'volunteer', ARRAY['service_programming', 'scheduling'], ARRAY['Tue', 'Wed'], '{"planning_center_power_user": true}'),
+('V081', 'Gia Martin', 'gia.martin@email.com', '555-0181', 'volunteer', ARRAY['immersive_video', 'projection_blending'], ARRAY['Sat', 'Sun'], '{"studies": "digital_media"}'),
+('V082', 'Caleb Dixon', 'caleb.dixon@email.com', '555-0182', 'volunteer', ARRAY['augmented_reality', 'lighting_sync'], ARRAY['Thu', 'Fri', 'Sun'], '{"xr_lab_access": true}'),
+('V083', 'Farah Idris', 'farah.idris@email.com', '555-0183', 'volunteer', ARRAY['community_radio', 'story_collecting'], ARRAY['Wed', 'Sat'], '{"languages": ["English","Somali"]}'),
+('V084', 'Cameron Wade', 'cameron.wade@email.com', '555-0184', 'volunteer', ARRAY['network_monitoring', 'stream_health'], ARRAY['Sun', 'Mon', 'Thu'], '{"certification": "CCNA"}'),
+('V085', 'Zane Foster', 'zane.foster@email.com', '555-0185', 'volunteer', ARRAY['portable_pa', 'field_recording'], ARRAY['Sat', 'Sun'], '{"vehicle": "sprinter_van"}'),
+('V086', 'Talia Monroe', 'talia.monroe@email.com', '555-0186', 'volunteer', ARRAY['set_decoration', 'environmental_design'], ARRAY['Tue', 'Fri', 'Sun'], '{"art_background": "interiors"}'),
+('V087', 'Quentin Briggs', 'quentin.briggs@email.com', '555-0187', 'volunteer', ARRAY['vr_experiences', '3d_layout'], ARRAY['Mon', 'Wed', 'Sat'], '{"software": "Unity"}'),
+('V088', 'Iris Delgado', 'iris.delgado@email.com', '555-0188', 'volunteer', ARRAY['creative_coding', 'projection_mapping'], ARRAY['Thu', 'Sat'], '{"favorite_tool": "TouchDesigner"}'),
+('V089', 'Mateo Silva', 'mateo.silva@email.com', '555-0189', 'volunteer', ARRAY['camera_tracking', 'event_photography'], ARRAY['Fri', 'Sat', 'Sun'], '{"camera_body": "FX3"}'),
+('V090', 'Skyler James', 'skyler.james@email.com', '555-0190', 'volunteer', ARRAY['audio_equipment', 'firmware_updates'], ARRAY['Mon', 'Thu'], '{"tech_specialty": "console_patching"}'),
+('V091', 'Brielle Winters', 'brielle.winters@email.com', '555-0191', 'volunteer', ARRAY['translation', 'live_captioning'], ARRAY['Sun', 'Tue', 'Wed'], '{"languages": ["English","Spanish","ASL"]}'),
+('V092', 'Howard Kim', 'howard.kim@email.com', '555-0192', 'volunteer', ARRAY['software_support', 'church_app_onboarding'], ARRAY['Mon', 'Tue', 'Sat'], '{"platform_experience": ["PlanningCenter","Subsplash"]}'),
+('V093', 'Luna Chavez', 'luna.chavez@email.com', '555-0193', 'volunteer', ARRAY['creative_media', 'short_form_video'], ARRAY['Wed', 'Thu', 'Sun'], '{"favorite_app": "CapCut"}'),
+('V094', 'Stefan Petrov', 'stefan.petrov@email.com', '555-0194', 'volunteer', ARRAY['lighting_design', 'laser_ops'], ARRAY['Fri', 'Sat'], '{"safety_certified": "Laser Safety Officer"}'),
+('V095', 'Jada Wallace', 'jada.wallace@email.com', '555-0195', 'volunteer', ARRAY['dance_coordination', 'stage_direction'], ARRAY['Mon', 'Thu', 'Sun'], '{"background": "theater"}'),
+('V096', 'Omarie Brooks', 'omarie.brooks@email.com', '555-0196', 'volunteer', ARRAY['sound_design', 'ambient_music'], ARRAY['Tue', 'Fri'], '{"gear_owned": "analog_synths"}'),
+('V097', 'Becca Lyons', 'becca.lyons@email.com', '555-0197', 'volunteer', ARRAY['story_production', 'documentary'], ARRAY['Sat', 'Sun'], '{"editing_suite": "Premiere Pro"}'),
+('V098', 'Nolan Price', 'nolan.price@email.com', '555-0198', 'volunteer', ARRAY['equipment_repairs', 'soldering'], ARRAY['Mon', 'Wed', 'Fri'], '{"certification": "Electronics Tech"}'),
+('V099', 'Estella Cruz', 'estella.cruz@email.com', '555-0199', 'volunteer', ARRAY['set_painting', 'calligraphy'], ARRAY['Tue', 'Thu', 'Sun'], '{"preferred_projects": "seasonal_backdrops"}'),
+('V100', 'Griffin Hayes', 'griffin.hayes@email.com', '555-0200', 'volunteer', ARRAY['livestream_direction', 'timelord_cues'], ARRAY['Wed', 'Sat', 'Sun'], '{"broadcast_platforms": ["Resi","YouTube"]}');
 
 -- Insert 10 roles (groups) that need volunteers
 INSERT INTO groups (external_id, name, group_type, requirements, capacity, current_count, metadata) VALUES
@@ -73,6 +123,16 @@ INSERT INTO groups (external_id, name, group_type, requirements, capacity, curre
 ('R008', 'Parking Team', 'role', ARRAY['parking', 'safety'], 3, 0, '{"outdoor": true}'),
 ('R009', 'Admin Support', 'role', ARRAY['admin', 'organization'], 3, 0, '{"weekday_hours": true}'),
 ('R010', 'Small Group Leader', 'role', ARRAY['teaching', 'leadership'], 6, 0, '{"weekly_commitment": true}');
+('R011', 'Broadcast Mix Team', 'role', ARRAY['audio_engineering', 'broadcast_mix'], 6, 0, '{"service_times": ["8:30","11:00"], "requires_training": true}'),
+('R012', 'Lighting Design Crew', 'role', ARRAY['lighting_design', 'color_theory'], 5, 0, '{"rehearsal": "Thursday 7pm"}'),
+('R013', 'Stage Build Crew', 'role', ARRAY['set_construction', 'stagecraft'], 10, 0, '{"work_nights": ["Monday","Wednesday"]}'),
+('R014', 'Creative Story Team', 'role', ARRAY['story_production', 'short_form_video'], 4, 0, '{"deliverables": "weekly testimonies"}'),
+('R015', 'Livestream Operators', 'role', ARRAY['livestream_direction', 'stream_health'], 6, 0, '{"platforms": ["Resi","YouTube","Facebook"]}'),
+('R016', 'Projection Mapping Team', 'role', ARRAY['projection_mapping', 'immersive_video'], 5, 0, '{"special_events": true}'),
+('R017', 'Equipment Maintenance Squad', 'role', ARRAY['equipment_repairs', 'soldering'], 4, 0, '{"workroom_hours": "Saturday 9am"}'),
+('R018', 'Podcast Studio Crew', 'role', ARRAY['podcast_production', 'audio_editing'], 5, 0, '{"training": "Studio A orientation"}');
+
+
 
 -- ============================================
 -- USE CASE 2: VISITOR MONITORING
@@ -240,6 +300,32 @@ INSERT INTO people (external_id, name, email, phone, person_type, interests, met
 ('ME016', 'Mentee Pete', 'mentee.pete@email.com', '555-0516', 'mentee', ARRAY['faith', 'biblical_study'], '{"age": 28}'),
 ('ME017', 'Mentee Quinn', 'mentee.quinn@email.com', '555-0517', 'mentee', ARRAY['relationships', 'recovery'], '{"age": 33}'),
 ('ME018', 'Mentee Rita', 'mentee.rita@email.com', '555-0518', 'mentee', ARRAY['career', 'business'], '{"age": 25}');
+
+-- Additional mentors with creative and technical expertise
+INSERT INTO people (external_id, name, email, phone, person_type, interests, capacity, metadata) VALUES
+    ('M013', 'Mentor Blake', 'mentor.blake@email.com', '555-0413', 'mentor', ARRAY['creative_media', 'storytelling'], 2, '{"experience_years": 8, "industry": "broadcast"}'),
+    ('M014', 'Mentor Priya', 'mentor.priya@email.com', '555-0414', 'mentor', ARRAY['audio_engineering', 'leadership'], 3, '{"experience_years": 11, "certification": "AES"}'),
+    ('M015', 'Mentor Victor', 'mentor.victor@email.com', '555-0415', 'mentor', ARRAY['lighting_design', 'stagecraft'], 2, '{"experience_years": 9, "focus": "touring"}'),
+    ('M016', 'Mentor Evelyn', 'mentor.evelyn@email.com', '555-0416', 'mentor', ARRAY['creative_writing', 'communication'], 2, '{"experience_years": 7, "background": "journalism"}'),
+    ('M017', 'Mentor Dante', 'mentor.dante@email.com', '555-0417', 'mentor', ARRAY['projection_mapping', 'immersive_video'], 1, '{"experience_years": 6, "studio": "XR Lab"}'),
+    ('M018', 'Mentor Gloria', 'mentor.gloria@email.com', '555-0418', 'mentor', ARRAY['equipment_repairs', 'tech_support'], 3, '{"experience_years": 12, "certification": "CTS"}'),
+    ('M019', 'Mentor Neil', 'mentor.neil@email.com', '555-0419', 'mentor', ARRAY['podcast_production', 'story_coaching'], 2, '{"experience_years": 5, "shows_produced": 60}'),
+    ('M020', 'Mentor Yvonne', 'mentor.yvonne@email.com', '555-0420', 'mentor', ARRAY['livestream_direction', 'team_development'], 3, '{"experience_years": 10, "notable_events": ["Easter","Christmas"]}');
+
+-- New mentees interested in creative/tech development
+INSERT INTO people (external_id, name, email, phone, person_type, interests, metadata) VALUES
+    ('ME019', 'Mentee Jordan', 'mentee.jordan@email.com', '555-0519', 'mentee', ARRAY['creative_media', 'short_form_video'], '{"age": 21, "goal": "learn storytelling"}'),
+    ('ME020', 'Mentee Kiera', 'mentee.kiera@email.com', '555-0520', 'mentee', ARRAY['audio_engineering', 'djing'], '{"age": 23, "goal": "serve youth events"}'),
+    ('ME021', 'Mentee Leo', 'mentee.leo@email.com', '555-0521', 'mentee', ARRAY['lighting_design', 'led_wall_ops'], '{"age": 27, "availability": ["Fri","Sat"]}'),
+    ('ME022', 'Mentee Margo', 'mentee.margo@email.com', '555-0522', 'mentee', ARRAY['set_design', 'environmental_design'], '{"age": 29, "background": "architecture"}'),
+    ('ME023', 'Mentee Nolan', 'mentee.nolan@email.com', '555-0523', 'mentee', ARRAY['podcast_production', 'voiceover'], '{"age": 24, "comfort_level": "beginner"}'),
+    ('ME024', 'Mentee Opal', 'mentee.opal@email.com', '555-0524', 'mentee', ARRAY['projection_mapping', 'creative_coding'], '{"age": 32, "goal": "serve special events"}'),
+    ('ME025', 'Mentee Pax', 'mentee.pax@email.com', '555-0525', 'mentee', ARRAY['equipment_repairs', 'tech_support'], '{"age": 26, "hardware_experience": "basic"}'),
+    ('ME026', 'Mentee Quinn', 'mentee.quinn@email.com', '555-0526', 'mentee', ARRAY['story_production', 'documentary'], '{"age": 31, "interests": ["testimonies","community stories"]}'),
+    ('ME027', 'Mentee Rhea', 'mentee.rhea@email.com', '555-0527', 'mentee', ARRAY['immersive_video', 'drone_videography'], '{"age": 28, "gear_owned": "DJI Mini 3"}'),
+    ('ME028', 'Mentee Simeon', 'mentee.simeon@email.com', '555-0528', 'mentee', ARRAY['livestream_direction', 'broadcast_mix'], '{"age": 34, "goal": "lead stream team"}'),
+    ('ME029', 'Mentee Tessa', 'mentee.tessa@email.com', '555-0529', 'mentee', ARRAY['creative_writing', 'announcement_scripts'], '{"age": 22, "mentor_preferences": ["female"]}'),
+    ('ME030', 'Mentee Uriel', 'mentee.uriel@email.com', '555-0530', 'mentee', ARRAY['vr_experiences', '3d_layout'], '{"age": 25, "learning_style": "hands_on"}');
 
 -- Summary of seeded data:
 -- ✓ 50 volunteers with diverse interests and availability
