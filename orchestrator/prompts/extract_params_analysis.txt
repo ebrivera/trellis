@@ -52,8 +52,8 @@ Output:
 {
   "template": "analysis",
   "sources": [
-    {"entity_type": "Gift"},
-    {"entity_type": "Group", "filters": ["group_type = 'initiative'"]}
+    {"entity_type": "gifts"},
+    {"entity_type": "groups", "filters": ["group_type = 'initiative'"]}
   ],
   "join_on": "initiative_id",
   "metrics": [
@@ -98,8 +98,8 @@ Output:
 {
   "template": "analysis",
   "sources": [
-    {"entity_type": "Person", "filters": ["person_type = 'volunteer'"]},
-    {"entity_type": "Group", "filters": ["group_type = 'role'"]}
+    {"entity_type": "people", "filters": ["person_type = 'volunteer'"]},
+    {"entity_type": "groups", "filters": ["group_type = 'role'"]}
   ],
   "join_on": "assignments.target_id",
   "metrics": [

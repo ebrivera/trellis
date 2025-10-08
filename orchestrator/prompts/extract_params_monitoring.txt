@@ -13,7 +13,7 @@ Available data:
 Your job is to extract:
 
 1. SOURCE - What to monitor?
-   - entity_type: "Person" or "Gift"
+   - entity_type: "people" or "gifts"
    - Filters to narrow down (e.g., person_type = 'visitor')
 
 2. CONDITION - What triggers the alert?
@@ -52,7 +52,7 @@ Output:
 {
   "template": "monitoring",
   "source": {
-    "entity_type": "Person",
+    "entity_type": "people",
     "filters": ["person_type = 'visitor'"]
   },
   "condition": {
@@ -84,7 +84,7 @@ Output:
 {
   "template": "monitoring",
   "source": {
-    "entity_type": "Gift"
+    "entity_type": "gifts"
   },
   "condition": {
     "time_field": "gift_date",

@@ -30,12 +30,7 @@ def extract_params_from_winner(state: Dict[str, Any]) -> Dict[str, Any]:
     Extract structured parameters from the winning debate strategy.
     
     Uses existing extraction prompts but enhances with debate context.
-    
-    Args:
-        state: Orchestrator state with debate complete and winner determined
-        
-    Returns:
-        Updated state with 'params' field populated
+    NOTE: Extraction prompts use EntityQuery schema (entity_type + subtype, not CSV files).
     """
     from ...templates import get_params_model
     
@@ -53,42 +48,42 @@ def extract_params_from_winner(state: Dict[str, Any]) -> Dict[str, Any]:
     print(f"Strategy: {winning_strategy[:200]}...")
     print()
     
-    # Get the appropriate Pydantic model for this template
+    # Get the appropriate Pydantic model (uses EntityQuery schema)
     ParamsModel = get_params_model(template)
     
-    # Load the existing extraction prompt for this template
+    # Load the extraction prompt for this template
     base_extraction_prompt = load_extraction_prompt(template.value)
     
     # Enhance with debate context
     enhanced_prompt = f"""You are extracting structured parameters from a WINNING DEBATE STRATEGY.
 
-        CONTEXT:
-        This request went through a multi-agent debate. Three agents (Planner, Operations, HumanFlourishing) proposed different strategies, and {winning_agent} won the debate with the following approach.
+    CONTEXT:
+    This request went through a multi-agent debate. Three agents (Planner, Operations, HumanFlourishing) proposed different strategies, and {winning_agent} won the debate.
 
-        ORIGINAL REQUEST:
-        {request}
+    ORIGINAL REQUEST:
+    {request}
 
-        WINNING AGENT: {winning_agent}
+    WINNING AGENT: {winning_agent}
 
-        WINNING STRATEGY:
-        {winning_strategy}
+    WINNING STRATEGY:
+    {winning_strategy}
 
-        INSTRUCTIONS:
-        {base_extraction_prompt}
+    EXTRACTION INSTRUCTIONS:
+    {base_extraction_prompt}
 
-        IMPORTANT: Use the winning agent's strategic priorities when making parameter choices:
-        - Planner prioritizes: efficiency, capacity balancing, scalability
-        - Operations prioritizes: feasibility, avoiding over-scheduling, practical execution  
-        - HumanFlourishing prioritizes: relationships, spiritual growth, community health
+    AGENT PRIORITIES (use these to inform parameter choices):
+    - Planner: efficiency, capacity balancing, scalability
+    - Operations: feasibility, avoiding over-scheduling, practical execution  
+    - HumanFlourishing: relationships, spiritual growth, community health
 
-        Extract parameters that align with {winning_agent}'s approach as described in their winning strategy.
+    Extract parameters that align with {winning_agent}'s approach as described in their winning strategy.
     """
 
     # Call LLM with structured output
     response = client.beta.chat.completions.parse(
         model="gpt-4o-2024-08-06",
         messages=[
-            {"role": "system", "content": "You are a parameter extraction specialist for church operations workflows."},
+            {"role": "system", "content": "You are a parameter extraction specialist. Extract database queries, not file operations."},
             {"role": "user", "content": enhanced_prompt}
         ],
         response_format=ParamsModel,
@@ -97,17 +92,28 @@ def extract_params_from_winner(state: Dict[str, Any]) -> Dict[str, Any]:
     
     params = response.choices[0].message.parsed.model_dump()
     
-    # Update both debate_state and top-level state
+    # Update state
     debate_state['params'] = params
     state['params'] = params
     
     print(f"✅ Parameters extracted successfully")
     print(f"   Template: {template.value}")
-    print(f"   Source: {params.get('source', {}).get('entity_type', 'N/A')}")
+    
+    # Log EntityQuery details
+    if 'source' in params:
+        source = params['source']
+        print(f"   Source: {source.get('entity_type')}")
+        if source.get('subtype'):
+            print(f"     Subtype: {source['subtype']}")
+        if source.get('filters'):
+            print(f"     Filters: {len(source['filters'])} conditions")
+    
     if 'target' in params:
-        print(f"   Target: {params['target'].get('entity_type', 'N/A')}")
-    if 'match_strategy' in params:
-        print(f"   Strategy: {params['match_strategy']}")
+        target = params['target']
+        print(f"   Target: {target.get('entity_type')}")
+        if target.get('subtype'):
+            print(f"     Subtype: {target['subtype']}")
+    
     print("="*80 + "\n")
     
     return state

@@ -9,12 +9,12 @@ Available data in the database:
 Your job is to extract:
 
 1. SOURCE - Which entities to assign?
-   - entity_type: "Person" or "Group"
+   - entity_type: "people" or "groups"
    - What person_type to filter? (volunteer, mentor, mentee, visitor, donor)
    - Any pre-filters? (e.g., "only those available on Sunday")
 
 2. TARGET - What are we assigning them to?
-   - entity_type: "Person" or "Group"  
+   - entity_type: "people" or "groups"  
    - What group_type to filter? (role, small_group, initiative)
    - Any constraints?
 
@@ -55,11 +55,11 @@ Output:
 {
   "template": "matching",
   "source": {
-    "entity_type": "Person",
+    "entity_type": "people",
     "filters": ["person_type = 'volunteer'", "availability_days @> ARRAY['Sun']"]
   },
   "target": {
-    "entity_type": "Group",
+    "entity_type": "groups",
     "filters": ["group_type = 'role'"]
   },
   "match_strategy": "interest_overlap",
@@ -85,11 +85,11 @@ Output:
 {
   "template": "matching",
   "source": {
-    "entity_type": "Person",
+    "entity_type": "people",
     "filters": ["person_type = 'mentee'"]
   },
   "target": {
-    "entity_type": "Person",
+    "entity_type": "people",
     "filters": ["person_type = 'mentor'"]
   },
   "match_strategy": "interest_overlap",
