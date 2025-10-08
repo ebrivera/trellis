@@ -153,19 +153,19 @@ export default function Dashboard() {
           <h2 className="mb-6 text-2xl font-semibold text-white">Quick Actions</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Link href="/settings" className="block">
-              <Button variant="outline" size="lg" className="w-full justify-center">
+              <Button variant="outline" size="lg" className="justify-center w-full">
                 <Upload className="inline-block w-5 h-5 mr-2" />
                 Import Data
               </Button>
             </Link>
             <Link href="/plan" className="block">
-              <Button variant="outline" size="lg" className="w-full justify-center">
+              <Button variant="outline" size="lg" className="justify-center w-full">
                 <Plus className="inline-block w-5 h-5 mr-2" />
                 Start New Goal
               </Button>
             </Link>
             <Link href="/approvals" className="block">
-              <Button variant="outline" size="lg" className="w-full justify-center">
+              <Button variant="outline" size="lg" className="justify-center w-full">
                 <CheckCircle2 className="inline-block w-5 h-5 mr-2" />
                 Review Approvals
               </Button>
@@ -222,7 +222,7 @@ function ActivityItem({
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="flex items-start gap-3">
-        <div className="shrink-0 mt-1">{icon}</div>
+        <div className="mt-1 shrink-0">{icon}</div>
         <div>
           <p className="font-medium text-white">{title}</p>
           <p className="text-sm text-white/50">{time}</p>
