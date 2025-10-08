@@ -1,9 +1,144 @@
+'use client'
+
 import Link from 'next/link'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
-import { Clock, BarChart3, MessageSquare, Users, Plus, CheckCircle2, Download, Target, Upload } from 'lucide-react'
+import { Clock, BarChart3, MessageSquare, Users, Plus, CheckCircle2, Download, Target, Upload, XCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+
+interface OverviewData {
+  card1: { label: string; value: number }
+  card2: { label: string; sublabel: string; value: number }
+  card3: { label: string; value: number }
+  card4: {
+    label: string
+    stats: Array<{ label: string; value: number }>
+  }
+}
+
+interface Activity {
+  activity_type: string
+  id: string
+  template_type: string
+  status: string
+  request_text: string
+  created_at: string
+  completed_at: string | null
+}
+
+interface RecentActivityData {
+  activities: Activity[]
+}
+
+interface MonthlyMetric {
+  label: string
+  current: number
+  previous: number
+  change: number
+}
+
+interface MonthlyMetricsData {
+  metrics: MonthlyMetric[]
+}
 
 export default function Dashboard() {
+  const [overviewData, setOverviewData] = useState<OverviewData | null>(null)
+  const [recentActivity, setRecentActivity] = useState<RecentActivityData | null>(null)
+  const [monthlyMetrics, setMonthlyMetrics] = useState<MonthlyMetricsData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [activityLoading, setActivityLoading] = useState(true)
+  const [metricsLoading, setMetricsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchOverview = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/dashboard/overview')
+        const data = await response.json()
+        setOverviewData(data)
+      } catch (error) {
+        console.error('Failed to fetch overview data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    const fetchRecentActivity = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/dashboard/recent-activity')
+        const data = await response.json()
+        setRecentActivity(data)
+      } catch (error) {
+        console.error('Failed to fetch recent activity:', error)
+      } finally {
+        setActivityLoading(false)
+      }
+    }
+
+    const fetchMonthlyMetrics = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/dashboard/monthly-metrics')
+        const data = await response.json()
+        setMonthlyMetrics(data)
+      } catch (error) {
+        console.error('Failed to fetch monthly metrics:', error)
+      } finally {
+        setMetricsLoading(false)
+      }
+    }
+
+    fetchOverview()
+    fetchRecentActivity()
+    fetchMonthlyMetrics()
+  }, [])
+
+  const getActivityIcon = (activity: Activity) => {
+    if (activity.status === 'completed') {
+      return <CheckCircle2 className="w-6 h-6 text-green-400" />
+    } else if (activity.status === 'pending' || activity.status === 'awaiting_approval') {
+      return <Clock className="w-6 h-6 text-yellow-400" />
+    } else if (activity.status === 'rejected' || activity.status === 'failed') {
+      return <XCircle className="w-6 h-6 text-red-400" />
+    } else if (activity.activity_type === 'workflow') {
+      return <BarChart3 className="w-6 h-6 text-blue-400" />
+    } else {
+      return <Target className="w-6 h-6 text-purple-400" />
+    }
+  }
+
+  const getActivityTitle = (activity: Activity) => {
+    const typeLabel = activity.activity_type === 'workflow' ? 'Workflow' : 'Approval'
+    const statusLabel = activity.status === 'pending' ? ' (Pending)' : 
+                       activity.status === 'awaiting_approval' ? ' (Awaiting Approval)' :
+                       activity.status === 'completed' ? ' Completed' :
+                       activity.status === 'rejected' ? ' Rejected' : ''
+    
+    const requestPreview = activity.request_text?.slice(0, 50) || activity.template_type
+    return `${typeLabel}${statusLabel}: ${requestPreview}${activity.request_text?.length > 50 ? '...' : ''}`
+  }
+
+  const getTimeAgo = (timestamp: string) => {
+    const now = new Date()
+    const then = new Date(timestamp)
+    const diffMs = now.getTime() - then.getTime()
+    
+    // Handle future timestamps (shouldn't happen but just in case)
+    if (diffMs < 0) return 'just now'
+    
+    const diffSecs = Math.floor(diffMs / 1000)
+    const diffMins = Math.floor(diffSecs / 60)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffSecs < 10) return 'just now'
+    if (diffSecs < 60) return `${diffSecs} seconds ago`
+    if (diffMins === 1) return '1 minute ago'
+    if (diffMins < 60) return `${diffMins} minutes ago`
+    if (diffHours === 1) return '1 hour ago'
+    if (diffHours < 24) return `${diffHours} hours ago`
+    if (diffDays === 1) return '1 day ago'
+    return `${diffDays} days ago`
+  }
+
   return (
     <main className="min-h-screen px-6 pt-32 pb-20">
       <div className="mx-auto max-w-7xl">
@@ -27,13 +162,16 @@ export default function Dashboard() {
         <section className="mb-12">
           <h2 className="mb-6 text-2xl font-semibold text-white">Overview</h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card padding="lg" className="transition-transform hover:scale-105">
+            {/* Card 1: Pending Approvals */}
+            <Card padding="lg" className="transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]">
               <div className="flex flex-col gap-2">
                 <Clock className="w-10 h-10 text-white" />
                 <h3 className="text-lg font-semibold text-white">
-                  Pending Approvals
+                  {loading ? 'Loading...' : overviewData?.card1.label || 'Pending Approvals'}
                 </h3>
-                <p className="text-3xl font-bold text-white">2</p>
+                <p className="text-3xl font-bold text-white">
+                  {loading ? '...' : overviewData?.card1.value ?? 0}
+                </p>
                 <p className="text-sm text-white/60">awaiting your review</p>
                 <Link href="/approvals" className="mt-2">
                   <Button variant="ghost" size="sm" className="w-full">
@@ -43,60 +181,54 @@ export default function Dashboard() {
               </div>
             </Card>
 
-            <Card padding="lg" className="transition-transform hover:scale-105">
+            {/* Card 2: Completed Workflows */}
+            <Card padding="lg" className="transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]">
               <div className="flex flex-col gap-2">
                 <BarChart3 className="w-10 h-10 text-white" />
                 <h3 className="text-lg font-semibold text-white">
-                  Recent Workflows
+                  {loading ? 'Loading...' : overviewData?.card2.label || 'Completed Workflows'}
                 </h3>
-                <p className="text-xl font-bold text-white">Scheduled Plan</p>
-                <p className="text-sm text-white/60">3 of 4 steps completed</p>
-                <div className="w-full h-2 mt-2 rounded-full bg-white/20">
-                  <div className="w-3/4 h-2 bg-white rounded-full" />
-                </div>
+                <p className="text-3xl font-bold text-white">
+                  {loading ? '...' : overviewData?.card2.value ?? 0}
+                </p>
+                <p className="text-sm text-white/60">
+                  {overviewData?.card2.sublabel || 'Last 7 Days'}
+                </p>
               </div>
             </Card>
 
-            <Card padding="lg" className="transition-transform hover:scale-105">
+            {/* Card 3: Messages Queued */}
+            <Card padding="lg" className="transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]">
               <div className="flex flex-col gap-2">
                 <MessageSquare className="w-10 h-10 text-white" />
                 <h3 className="text-lg font-semibold text-white">
-                  Task Scheduled
+                  {loading ? 'Loading...' : overviewData?.card3.label || 'Messages Queued'}
                 </h3>
-                <p className="text-3xl font-bold text-white">125</p>
-                <p className="text-sm text-white/60">87% delivered</p>
-                <div className="flex gap-2 mt-2">
-                  <div className="flex-1 text-center">
-                    <div className="text-xl font-bold text-green-400">109</div>
-                    <div className="text-xs text-white/50">sent</div>
-                  </div>
-                  <div className="flex-1 text-center">
-                    <div className="text-xl font-bold text-yellow-400">16</div>
-                    <div className="text-xs text-white/50">pending</div>
-                  </div>
-                </div>
+                <p className="text-3xl font-bold text-white">
+                  {loading ? '...' : overviewData?.card3.value ?? 0}
+                </p>
+                <p className="text-sm text-white/60">pending delivery</p>
               </div>
             </Card>
 
-            <Card padding="lg" className="transition-transform hover:scale-105">
+            {/* Card 4: Statistics */}
+            <Card padding="lg" className="transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)]">
               <div className="flex flex-col gap-2">
                 <Users className="w-10 h-10 text-white" />
                 <h3 className="text-lg font-semibold text-white">
-                  Statistics
+                  {loading ? 'Loading...' : overviewData?.card4.label || 'Statistics'}
                 </h3>
                 <div className="mt-2 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Statistic 1</span>
-                    <span className="font-bold text-white">245</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Statistic 2</span>
-                    <span className="font-bold text-white">8</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Statistic 3</span>
-                    <span className="font-bold text-white">2</span>
-                  </div>
+                  {loading ? (
+                    <div className="text-white/60">Loading...</div>
+                  ) : (
+                    overviewData?.card4.stats.map((stat, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span className="text-white/60">{stat.label}</span>
+                        <span className="font-bold text-white">{stat.value}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </Card>
@@ -108,43 +240,34 @@ export default function Dashboard() {
           <h2 className="mb-6 text-2xl font-semibold text-white">
             Recent Activity
           </h2>
-          <Card className="space-y-4">
-            <ActivityItem
-              icon={<CheckCircle2 className="w-6 h-6 text-green-400" />}
-              title="Activity 1"
-              time="2 hours ago"
-            />
-            <Divider />
-            <ActivityItem
-              icon={<Clock className="w-6 h-6 text-yellow-400" />}
-              title="Activity 2 (Pending Approval)"
-              time="5 hours ago"
-              action={
-                <Link href="/approvals">
-                  <Button variant="ghost" size="sm">
-                    Review
-                  </Button>
-                </Link>
-              }
-            />
-            <Divider />
-            <ActivityItem
-              icon={<BarChart3 className="w-6 h-6 text-blue-400" />}
-              title="Activity 3"
-              time="1 day ago"
-            />
-            <Divider />
-            <ActivityItem
-              icon={<Download className="w-6 h-6 text-purple-400" />}
-              title="Activity 4"
-              time="2 days ago"
-            />
-            <Divider />
-            <ActivityItem
-              icon={<Target className="w-6 h-6 text-pink-400" />}
-              title="Activity 5"
-              time="3 days ago"
-            />
+          <Card>  {/* Remove className="space-y-4" */}
+            {activityLoading ? (
+              <div className="py-8 text-center text-white/60">Loading activities...</div>
+            ) : recentActivity?.activities && recentActivity.activities.length > 0 ? (
+              recentActivity.activities.map((activity, index) => (
+                <div key={activity.id}>
+                  {index > 0 && <Divider />}
+                  <div className="py-4">  {/* Add padding wrapper */}
+                    <ActivityItem
+                      icon={getActivityIcon(activity)}
+                      title={getActivityTitle(activity)}
+                      time={getTimeAgo(activity.created_at)}
+                      action={
+                        activity.status === 'pending' || activity.status === 'awaiting_approval' ? (
+                          <Link href="/approvals">
+                            <Button variant="ghost" size="sm">
+                              Review
+                            </Button>
+                          </Link>
+                        ) : undefined
+                      }
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="py-8 text-center text-white/60">No recent activity</div>
+            )}
           </Card>
         </section>
 
@@ -181,26 +304,21 @@ export default function Dashboard() {
         <section>
           <h2 className="mb-6 text-2xl font-semibold text-white">This Month</h2>
           <Card>
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              <MetricItem
-                label="Metric 1"
-                value="3"
-                change="+2 from last month"
-                trend="up"
-              />
-              <MetricItem
-                label="Metric 2"
-                value="52"
-                change="+18 from last month"
-                trend="up"
-              />
-              <MetricItem
-                label="Metric 3"
-                value="847"
-                change="+124 from last month"
-                trend="up"
-              />
-            </div>
+            {metricsLoading ? (
+              <div className="py-8 text-center text-white/60">Loading metrics...</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+                {(monthlyMetrics?.metrics || []).map((metric, index) => (
+                  <MetricItem
+                    key={index}
+                    label={metric.label}
+                    value={metric.current.toString()}
+                    change={`${metric.change >= 0 ? '+' : ''}${metric.change} from last month`}
+                    trend={metric.change >= 0 ? 'up' : 'down'}
+                  />
+                ))}
+              </div>
+            )}
           </Card>
         </section>
       </div>
@@ -220,9 +338,9 @@ function ActivityItem({
   action?: React.ReactNode
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex items-start gap-3">
-        <div className="mt-1 shrink-0">{icon}</div>
+    <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center gap-3">
+        <div className="shrink-0">{icon}</div>  {/* Removed mt-1 */}
         <div>
           <p className="font-medium text-white">{title}</p>
           <p className="text-sm text-white/50">{time}</p>

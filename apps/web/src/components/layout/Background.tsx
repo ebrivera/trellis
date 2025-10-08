@@ -53,7 +53,7 @@ void mainImage(out vec4 o, vec2 C) {
     float i, d, z, T = iTime * uSpeed * uDirection;
     vec3 O, p, S;
 
-    for (vec2 r = iResolution.xy, Q; ++i < 60.; O += o.w/d*o.xyz) {
+    for (vec2 r = iResolution.xy, Q; ++i < 30.; O += o.w/d*o.xyz) {
         p = z*normalize(vec3(C-.5*r,r.y)); 
         p.z -= 4.; 
         S = p;
@@ -114,7 +114,7 @@ export const Plasma: React.FC<PlasmaProps> = ({
             webgl: 2,
             alpha: true,
             antialias: false,
-            dpr: Math.min(window.devicePixelRatio || 1, 2)
+            dpr: 1
         });
         const gl = renderer.gl;
         const canvas = gl.canvas as HTMLCanvasElement;
@@ -173,8 +173,20 @@ export const Plasma: React.FC<PlasmaProps> = ({
     setSize();
 
     let raf = 0;
+    let lastFrameTime = 0;
+    const targetFPS = 30;
+    const frameInterval = 1000 / targetFPS;
     const t0 = performance.now();
+    
     const loop = (t: number) => {
+        const delta = t - lastFrameTime;
+        
+        if (delta < frameInterval) {
+            raf = requestAnimationFrame(loop);
+            return;
+        }
+        
+        lastFrameTime = t - (delta % frameInterval);
         let timeValue = (t - t0) * 0.001;
 
         if (direction === 'pingpong') {
@@ -187,9 +199,20 @@ export const Plasma: React.FC<PlasmaProps> = ({
         raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
+    
+    const io = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+            if (!raf) raf = requestAnimationFrame(loop);
+        } else {
+            cancelAnimationFrame(raf);
+            raf = 0;
+        }
+    }, { threshold: 0.1 });
+    io.observe(container);
 
     return () => {
         cancelAnimationFrame(raf);
+        io.disconnect();
         ro.disconnect();
         if (mouseInteractive) {
             container.removeEventListener('mousemove', handleMouseMove);

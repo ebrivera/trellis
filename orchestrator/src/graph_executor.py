@@ -73,18 +73,24 @@ def normalize_match_fields(match_fields):
 # ============================================================================
 
 async def generate_preview(template: TemplateType, params: Dict[str, Any], workflow_id: str) -> Dict[str, Any]:
-    """
-    Generate preview of what WOULD happen without committing to DB.
-    This is shown in the approval UI.
-    """
-    if template == TemplateType.MATCHING:
-        return await _preview_matching(params)
-    elif template == TemplateType.MONITORING:
-        return await _preview_monitoring(params)
-    elif template == TemplateType.ANALYSIS:
-        return await _preview_analysis(params)
-    else:
-        return {"error": f"Unknown template: {template}"}
+    try:
+        if template == TemplateType.MATCHING:
+            return await _preview_matching(params)
+        elif template == TemplateType.MONITORING:
+            return await _preview_monitoring(params)
+        elif template == TemplateType.ANALYSIS:
+            return await _preview_analysis(params)
+        else:
+            return {"error": f"Unknown template: {template}"}
+    except Exception as e:
+        print(f"⚠️ Preview generation failed: {e}")
+        return {
+            "error": "Preview generation failed",
+            "message": str(e),
+            "proposed_assignments": 0,
+            "source_count": 0,
+            "target_count": 0
+        }
 
 
 async def _preview_matching(params: Dict[str, Any]) -> Dict[str, Any]:

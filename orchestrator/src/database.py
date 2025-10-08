@@ -21,9 +21,14 @@ async def init_db_pool():
     """Initialize the database connection pool."""
     global _pool
     
+    # add after load_dotenv()
     database_url = os.getenv("DATABASE_URL")
+    print("DEBUG: DATABASE_URL:", repr(database_url))
     if not database_url:
         raise ValueError("DATABASE_URL environment variable not set")
+    
+    database_url = os.getenv("DATABASE_URL")
+    print("DEBUG: DATABASE_URL:", repr(database_url))
     
     _pool = await asyncpg.create_pool(
         database_url,
