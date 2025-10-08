@@ -81,7 +81,7 @@ def extract_params(state: Dict[str, Any]) -> Dict[str, Any]:
                 print(f"  - {error}")
         
         # Store params as dict for easy serialization
-        state['params'] = params.model_dump()
+        state['params'] = params.model_dump(mode='json')
         
         print(f"✓ Extracted {template.value} parameters")
         print(f"  Source: {_summarize_source(params)}")

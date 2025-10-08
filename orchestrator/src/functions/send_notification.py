@@ -73,7 +73,7 @@ async def send_notification(
             # Build message record
             message = {
                 'recipient_id': str(recipient['id']),
-                'recipient_contact': _get_contact_info(recipient, config.channel),
+                # 'recipient_contact': _get_contact_info(recipient, config.channel),
                 'channel': config.channel.value,
                 'template': config.template,
                 'content': content,
