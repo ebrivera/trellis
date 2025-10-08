@@ -278,7 +278,7 @@ async def get_recent_activity():
             ag.status,
             wr.request_text,
             ag.created_at,
-            ag.decided_at as completed_at
+            ag.approved_at as completed_at
         FROM approval_gates ag
         JOIN workflow_runs wr ON ag.workflow_run_id = wr.id
         WHERE ag.created_at >= CURRENT_DATE - INTERVAL '7 days'
@@ -288,6 +288,84 @@ async def get_recent_activity():
     """)
     
     return {"activities": activities}
+
+
+# ============================================================================
+# MONTHLY METRICS (DASHBOARD)
+# ============================================================================
+
+@app.get("/dashboard/monthly-metrics")
+async def get_monthly_metrics():
+    from .database import fetch_one
+    
+    # Workflows completed this month vs last month
+    workflows_this_month = await fetch_one("""
+        SELECT COUNT(*) as count 
+        FROM workflow_runs 
+        WHERE status = 'completed' 
+        AND completed_at >= DATE_TRUNC('month', CURRENT_DATE)
+    """)
+    
+    workflows_last_month = await fetch_one("""
+        SELECT COUNT(*) as count 
+        FROM workflow_runs 
+        WHERE status = 'completed' 
+        AND completed_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+        AND completed_at < DATE_TRUNC('month', CURRENT_DATE)
+    """)
+    
+    # Assignments created this month vs last month
+    assignments_this_month = await fetch_one("""
+        SELECT COUNT(*) as count 
+        FROM assignments 
+        WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
+    """)
+    
+    assignments_last_month = await fetch_one("""
+        SELECT COUNT(*) as count 
+        FROM assignments 
+        WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+        AND created_at < DATE_TRUNC('month', CURRENT_DATE)
+    """)
+    
+    # Messages sent this month vs last month
+    messages_this_month = await fetch_one("""
+        SELECT COUNT(*) as count 
+        FROM messages 
+        WHERE status = 'sent'
+        AND created_at >= DATE_TRUNC('month', CURRENT_DATE)
+    """)
+    
+    messages_last_month = await fetch_one("""
+        SELECT COUNT(*) as count 
+        FROM messages 
+        WHERE status = 'sent'
+        AND created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+        AND created_at < DATE_TRUNC('month', CURRENT_DATE)
+    """)
+    
+    return {
+        "metrics": [
+            {
+                "label": "Workflows Completed",
+                "current": workflows_this_month['count'],
+                "previous": workflows_last_month['count'],
+                "change": workflows_this_month['count'] - workflows_last_month['count']
+            },
+            {
+                "label": "Assignments Created",
+                "current": assignments_this_month['count'],
+                "previous": assignments_last_month['count'],
+                "change": assignments_this_month['count'] - assignments_last_month['count']
+            },
+            {
+                "label": "Messages Sent",
+                "current": messages_this_month['count'],
+                "previous": messages_last_month['count'],
+                "change": messages_this_month['count'] - messages_last_month['count']
+            }
+        ]
+    }
 
 
 if __name__ == "__main__":

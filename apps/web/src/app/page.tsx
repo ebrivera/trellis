@@ -30,11 +30,24 @@ interface RecentActivityData {
   activities: Activity[]
 }
 
+interface MonthlyMetric {
+  label: string
+  current: number
+  previous: number
+  change: number
+}
+
+interface MonthlyMetricsData {
+  metrics: MonthlyMetric[]
+}
+
 export default function Dashboard() {
   const [overviewData, setOverviewData] = useState<OverviewData | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivityData | null>(null)
+  const [monthlyMetrics, setMonthlyMetrics] = useState<MonthlyMetricsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [activityLoading, setActivityLoading] = useState(true)
+  const [metricsLoading, setMetricsLoading] = useState(true)
 
   useEffect(() => {
     const fetchOverview = async () => {
@@ -61,8 +74,21 @@ export default function Dashboard() {
       }
     }
 
+    const fetchMonthlyMetrics = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/dashboard/monthly-metrics')
+        const data = await response.json()
+        setMonthlyMetrics(data)
+      } catch (error) {
+        console.error('Failed to fetch monthly metrics:', error)
+      } finally {
+        setMetricsLoading(false)
+      }
+    }
+
     fetchOverview()
     fetchRecentActivity()
+    fetchMonthlyMetrics()
   }, [])
 
   const getActivityIcon = (activity: Activity) => {
@@ -266,26 +292,21 @@ export default function Dashboard() {
         <section>
           <h2 className="mb-6 text-2xl font-semibold text-white">This Month</h2>
           <Card>
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              <MetricItem
-                label="Metric 1"
-                value="3"
-                change="+2 from last month"
-                trend="up"
-              />
-              <MetricItem
-                label="Metric 2"
-                value="52"
-                change="+18 from last month"
-                trend="up"
-              />
-              <MetricItem
-                label="Metric 3"
-                value="847"
-                change="+124 from last month"
-                trend="up"
-              />
-            </div>
+            {metricsLoading ? (
+              <div className="py-8 text-center text-white/60">Loading metrics...</div>
+            ) : (
+              <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+                {(monthlyMetrics?.metrics || []).map((metric, index) => (
+                  <MetricItem
+                    key={index}
+                    label={metric.label}
+                    value={metric.current.toString()}
+                    change={`${metric.change >= 0 ? '+' : ''}${metric.change} from last month`}
+                    trend={metric.change >= 0 ? 'up' : 'down'}
+                  />
+                ))}
+              </div>
+            )}
           </Card>
         </section>
       </div>
