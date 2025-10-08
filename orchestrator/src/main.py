@@ -268,6 +268,7 @@ async def get_recent_activity():
             completed_at AT TIME ZONE 'UTC' as completed_at
         FROM workflow_runs
         WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+        AND status != 'awaiting_approval'
         
         UNION ALL
         
