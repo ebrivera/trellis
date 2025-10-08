@@ -57,10 +57,17 @@ export interface NotificationTemplate {
  * Design: User sees ALL assignments + problems (unmatched, over-capacity) in one view
  */
 export interface MatchingPreview {
-    assignments: MatchingAssignment[] // Successful pairings (e.g., 38 volunteers matched)
-    unmatched: UnmatchedItem[] // Entities that couldn't be matched (e.g., 4 volunteers)
-    capacityWarnings: string[] // Targets at/over capacity (e.g., "Youth Leader at capacity 3/3")
+    proposed_assignments: number  // ← Changed: total count
+    assignments_preview: MatchingAssignment[]  // ← Changed: renamed from 'assignments'
+    match_rate: number  // ← Added
+    avg_match_score: number  // ← Added
+    source_count: number  // ← Added
+    target_count: number  // ← Added
+    notifications_planned: number  // ← Added
+    unmatched?: UnmatchedItem[]  // ← Made optional
+    capacityWarnings?: string[]  // ← Made optional
 }
+
 
 /**
  * MatchingAssignment: A single proposed pairing
@@ -172,4 +179,94 @@ export interface ResultAction {
     count: number // How many (e.g., 38 assignments, 48 messages)
     description: string // Human-readable (e.g., "SMS sent to volunteers")
     details?: any // Optional detailed data (e.g., list of phone numbers for debugging)
+}
+
+/**
+ * ============================================================================
+ * DEBATE SYSTEM TYPES (for real-time multi-agent streaming)
+ * ============================================================================
+ */
+
+/**
+ * The three debate agents + moderator for tie-breaking
+ */
+export type AgentName = 'Planner' | 'Operations' | 'HumanFlourishing' | 'Moderator'
+
+/**
+ * Message types in each debate round
+ */
+export type DebateMessageType = 'proposal' | 'rebuttal' | 'vote' | 'tiebreaker'
+
+/**
+ * A single message from an agent during debate
+ */
+export interface DebateMessage {
+    round: 1 | 2 | 3
+    agent: AgentName
+    messageType: DebateMessageType
+    content: string
+    timestamp?: string
+}
+
+/**
+ * Agent configuration for UI display
+ */
+export interface AgentConfig {
+    name: AgentName
+    emoji: string
+    color: string
+    bgColor: string
+    borderColor: string
+    description: string
+}
+
+/**
+ * SSE event types that the backend will stream
+ */
+export type OrchestratorEventType = 
+    | 'classifier_complete'
+    | 'debate_start'
+    | 'round_1_proposal'
+    | 'round_2_rebuttal' 
+    | 'round_3_vote'
+    | 'voting_complete'
+    | 'preview_ready'
+    | 'error'
+    | 'complete'
+
+/**
+ * Base SSE event structure
+ */
+export interface OrchestratorEvent {
+    event: OrchestratorEventType
+    data: any
+}
+
+/**
+ * Event-specific data payloads
+ */
+export interface ClassifierCompleteData {
+    template: TemplateType
+    confidence: number
+    reasoning: string
+}
+
+export interface DebateMessageData {
+    agent: AgentName
+    round: 1 | 2 | 3
+    messageType: DebateMessageType
+    content: string
+}
+
+export interface VotingCompleteData {
+    winner: AgentName
+    voteTally: Record<AgentName, number>
+    winningStrategy: string
+    tieBrokenByModerator: boolean
+}
+
+export interface PreviewReadyData {
+    approvalId: string
+    workflowId: string
+    preview: MatchingPreview | MonitoringPreview | AnalysisPreview
 }

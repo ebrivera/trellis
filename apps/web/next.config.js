@@ -1,5 +1,4 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+module.exports = {
   transpilePackages: ['@trellis/utils', '@trellis/types'],
 };
-module.exports = nextConfig;

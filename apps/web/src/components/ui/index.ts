@@ -6,4 +6,4 @@ export { Badge } from './Badge'
 export { Modal } from './Modal'
 export { ApprovalItem } from './ApprovalItem'
 export type { ApprovalItemData } from './ApprovalItem'
-
+export { DebateViewer } from './DebateViewer'
