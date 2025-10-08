@@ -502,7 +502,76 @@ export default function GoalsPage() {
                                 {message.approvalPreview && (
                                     <div className="mt-4">
                                         <Card padding="lg" className="space-y-4 bg-white/5">
-                                            {/* Your existing approval preview code stays the same */}
+                                            {/* Header with template badge */}
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <Badge variant={message.approvalPreview.template === 'matching' ? 'info' : message.approvalPreview.template === 'monitoring' ? 'default' : 'success'}>
+                                                        {message.approvalPreview.template.charAt(0).toUpperCase() + message.approvalPreview.template.slice(1)} Template
+                                                    </Badge>
+                                                    <h3 className="text-xl font-bold text-white">
+                                                        {message.approvalPreview.template === 'matching' && `Match ${(message.approvalPreview.preview as MatchingPreview).assignments_preview.length} assignments`}
+                                                        {message.approvalPreview.template === 'monitoring' && `Monitor ${(message.approvalPreview.preview as MonitoringPreview).flaggedItems.length} flagged items`}
+                                                        {message.approvalPreview.template === 'analysis' && `Analyze ${(message.approvalPreview.preview as AnalysisPreview).dimensions.length} dimensions`}
+                                                    </h3>
+                                                </div>
+                                                <span className="px-3 py-1 text-xs font-medium text-yellow-400 border rounded-full border-yellow-400/30 bg-yellow-400/10 shrink-0">
+                                                    Requires Approval
+                                                </span>
+                                            </div>
+
+                                            {/* Template-specific preview summary */}
+                                            <div className="p-4 border rounded-lg bg-white/5 border-white/10">
+                                                <div className="flex items-start gap-3 mb-3">
+                                                    {message.approvalPreview.template === 'matching' && <Users className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />}
+                                                    {message.approvalPreview.template === 'monitoring' && <Clock className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />}
+                                                    {message.approvalPreview.template === 'analysis' && <TrendingUp className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />}
+                                                    <div className="flex-1">
+                                                        <p className="mb-2 text-sm text-white/80">
+                                                            {message.approvalPreview.template === 'matching' && `${(message.approvalPreview.preview as MatchingPreview).assignments_preview.length} proposed assignments from ${message.approvalPreview.params.sourceFile}${message.approvalPreview.params.targetFile ? ` to ${message.approvalPreview.params.targetFile}` : ''}`}
+                                                            {message.approvalPreview.template === 'monitoring' && `${(message.approvalPreview.preview as MonitoringPreview).flaggedItems.length} items flagged: ${(message.approvalPreview.preview as MonitoringPreview).condition}`}
+                                                            {message.approvalPreview.template === 'analysis' && `Analysis of ${(message.approvalPreview.preview as AnalysisPreview).totalAnalyzed} records with ${(message.approvalPreview.preview as AnalysisPreview).lapsedItems.length} items requiring attention`}
+                                                        </p>
+                                                        {/* Show key metrics */}
+                                                        <div className="flex flex-wrap gap-3 text-xs">
+                                                            {Object.entries(message.approvalPreview.metrics).slice(0, 3).map(([key, value]) => (
+                                                                <div key={key} className="flex items-center gap-1">
+                                                                    <span className="text-white/50">{key}:</span>
+                                                                    <span className="font-semibold text-white">{value}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Warnings/Unmatched items */}
+                                                {message.approvalPreview.template === 'matching' && 
+                                                (message.approvalPreview.preview as MatchingPreview).unmatched && 
+                                                (message.approvalPreview.preview as MatchingPreview).unmatched!.length > 0 && (
+                                                    <div className="flex items-start gap-2 p-2 mt-2 border rounded bg-yellow-400/10 border-yellow-400/20">
+                                                        <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+                                                        <p className="text-xs text-yellow-300">
+                                                            {(message.approvalPreview.preview as MatchingPreview).unmatched!.length} items couldn&apos;t be matched
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {message.showActions && (
+                                                <div className="flex flex-wrap gap-3 pt-4">
+                                                    <Button onClick={handleApprove} size="lg">
+                                                        <CheckCircle className="inline-block w-5 h-5 mr-2" />
+                                                        Approve & Continue
+                                                    </Button>
+                                                    <Button onClick={handleRevise} variant="outline" size="lg">
+                                                        <Edit className="inline-block w-5 h-5 mr-2" />
+                                                        Revise Plan
+                                                    </Button>
+                                                    <Button onClick={handleCancel} variant="ghost" size="lg">
+                                                        <X className="inline-block w-5 h-5 mr-2" />
+                                                        Cancel
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </Card>
                                     </div>
                                 )}
