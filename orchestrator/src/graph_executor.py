@@ -201,26 +201,73 @@ async def _preview_monitoring(params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def _preview_analysis(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Preview analysis workflow"""
+    """Preview analysis workflow - shows what metrics will be calculated"""
     from .templates.analysis import AnalysisParams
-    
+    import pandas as pd
+
     params_model = AnalysisParams(**params)
-    
-    # Load data from first source (TODO: Support multiple sources with joins)
+
+    # Load data from first source
     first_source = params_model.sources[0]
     df = await load_data(
         EntityType(first_source.entity_type),
         first_source.subtype
     )
-    
+
+    print(f"🔍 DEBUG: Loaded {len(df)} {first_source.entity_type} records for analysis")
+
+    # Handle joins if multiple sources specified
+    if len(params_model.sources) > 1 and params_model.join_on:
+        second_source = params_model.sources[1]
+        join_df = await load_data(
+            EntityType(second_source.entity_type),
+            second_source.subtype
+        )
+        print(f"🔍 DEBUG: Loaded {len(join_df)} {second_source.entity_type} for join")
+
+        # Perform join (left join to keep all records from first source)
+        # Map initiative_id → name from groups table
+        if 'id' in join_df.columns and 'name' in join_df.columns:
+            # Create a mapping dict: UUID → name
+            id_to_name = dict(zip(join_df['id'].astype(str), join_df['name']))
+            # Add a new column with the initiative name
+            if params_model.join_on in df.columns:
+                df['initiative_name'] = df[params_model.join_on].astype(str).map(id_to_name)
+                print(f"🔍 DEBUG: Mapped {df['initiative_name'].notna().sum()} initiative names")
+
+                # Update metrics to use initiative_name instead of initiative_id
+                for metric in params_model.metrics:
+                    if metric.group_by == params_model.join_on:
+                        metric.group_by = 'initiative_name'
+
+    # Apply filters if present
+    if first_source.filters:
+        print(f"🔍 DEBUG: Applying {len(first_source.filters)} filters...")
+        df = filter_data(df, first_source.filters)
+        print(f"🔍 DEBUG: After filtering: {len(df)} records remain")
+
     # Calculate metrics
     metrics_result = calculate_metrics(params_model.metrics, df)
-    
+    print(f"🔍 DEBUG: Calculated metrics: {metrics_result}")
+
+    # Determine if any metrics are grouped (produce multiple values)
+    grouped_metrics = {
+        name: value for name, value in metrics_result.items()
+        if isinstance(value, dict) and 'error' not in value
+    }
+
+    scalar_metrics = {
+        name: value for name, value in metrics_result.items()
+        if not isinstance(value, dict) or 'error' in value
+    }
+
     return _serialize_preview({
         "total_analyzed": len(df),
-        "dimensions": [],  # TODO: Implement dimension grouping
-        "lapsed_items": [],  # TODO: Implement lapsed item detection
-        "metrics": metrics_result
+        "metrics": metrics_result,
+        "grouped_metrics": list(grouped_metrics.keys()),
+        "scalar_metrics": list(scalar_metrics.keys()),
+        "report_summary": f"Analysis of {len(df)} {first_source.entity_type} records with {len(params_model.metrics)} metrics",
+        "source_type": first_source.entity_type  # Use entity_type instead of subtype
     })
 
 
@@ -355,9 +402,15 @@ async def execute_matching(params: Dict[str, Any], workflow_run_id: str) -> Dict
             recipients = []
         
         if recipients:
-            result = await send_notification(recipients, notif_config, {})
+            result = await send_notification(
+                recipients,
+                notif_config,
+                {},
+                db_insert=True,
+                workflow_run_id=workflow_run_id
+            )
             notification_results.append(result)
-    
+
     # Calculate final metrics
     match_rate = len(assignments) / len(source_df) if len(source_df) > 0 else 0
     
@@ -393,7 +446,13 @@ async def execute_monitoring(params: Dict[str, Any], workflow_run_id: str) -> Di
     for notif_config in params_model.alerts:
         recipients = flagged.to_dict('records')
         if recipients:
-            result = await send_notification(recipients, notif_config, {})
+            result = await send_notification(
+                recipients,
+                notif_config,
+                {},
+                db_insert=True,
+                workflow_run_id=workflow_run_id
+            )
             notification_results.append(result)
     
     return {
@@ -403,30 +462,66 @@ async def execute_monitoring(params: Dict[str, Any], workflow_run_id: str) -> Di
 
 
 async def execute_analysis(params: Dict[str, Any], workflow_run_id: str) -> Dict[str, Any]:
-    """Execute analysis workflow: load → calculate metrics → notify"""
+    """Execute analysis workflow: load → filter → calculate metrics → store results"""
     from .templates.analysis import AnalysisParams
-    
+    import pandas as pd
+
     params_model = AnalysisParams(**params)
-    
-    # Load data from first source (TODO: Support multiple sources with joins)
+
+    # Load data from first source
     first_source = params_model.sources[0]
     df = await load_data(
         EntityType(first_source.entity_type),
         first_source.subtype
     )
-    
+
+    print(f"📊 Analysis: Loaded {len(df)} {first_source.entity_type} records")
+
+    # Handle joins if multiple sources specified
+    if len(params_model.sources) > 1 and params_model.join_on:
+        second_source = params_model.sources[1]
+        join_df = await load_data(
+            EntityType(second_source.entity_type),
+            second_source.subtype
+        )
+        print(f"📊 Analysis: Loaded {len(join_df)} {second_source.entity_type} for join")
+
+        # Perform join - map initiative_id → name from groups table
+        if 'id' in join_df.columns and 'name' in join_df.columns:
+            # Create a mapping dict: UUID → name
+            id_to_name = dict(zip(join_df['id'].astype(str), join_df['name']))
+            # Add a new column with the initiative name
+            if params_model.join_on in df.columns:
+                df['initiative_name'] = df[params_model.join_on].astype(str).map(id_to_name)
+                print(f"📊 Analysis: Mapped {df['initiative_name'].notna().sum()} initiative names")
+
+                # Update metrics to use initiative_name instead of initiative_id
+                for metric in params_model.metrics:
+                    if metric.group_by == params_model.join_on:
+                        metric.group_by = 'initiative_name'
+
+    # Apply filters if present
+    if first_source.filters:
+        print(f"📊 Analysis: Applying {len(first_source.filters)} filters...")
+        df = filter_data(df, first_source.filters)
+        print(f"📊 Analysis: After filtering: {len(df)} records remain")
+
     # Calculate metrics
     metrics_result = calculate_metrics(params_model.metrics, df)
-    
-    # Send report notification (if configured)
-    notification_results = []
-    for notif_config in params_model.notifications:
-        # For analysis, notify configured recipients (e.g., leadership)
-        # TODO: Implement recipient lookup for analysis reports
-        pass
-    
-    return {
+    print(f"📊 Analysis: Calculated {len(metrics_result)} metrics")
+
+    # Format results for display
+    result_summary = {
         "entities_analyzed": len(df),
         "metrics": metrics_result,
-        "insights": []
+        "source_type": first_source.entity_type,  # Use entity_type instead of subtype
+        "metric_count": len(metrics_result)
     }
+
+    # Note: Analysis workflows produce REPORTS, not individual notifications
+    # If notifications are needed, they should go to admins as summary reports
+    # Individual person notifications should use Monitoring template instead
+
+    print(f"✅ Analysis complete: {len(df)} records analyzed, {len(metrics_result)} metrics calculated")
+
+    return result_summary

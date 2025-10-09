@@ -76,6 +76,7 @@ export default function ApprovalsPage() {
 
                 return {
                     id: item.id,
+                    workflowRunId: item.workflow_run_id,
                     template: item.template_type,
                     status: item.status,
                     createdAt: item.created_at,
@@ -103,19 +104,24 @@ export default function ApprovalsPage() {
 
     const handleApprove = async (id: string) => {
         try {
-            await fetch(`http://localhost:8000/approval/${id}/decide`, {
+            const response = await fetch(`http://localhost:8000/approval/${id}/decide`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'approve' })
             })
 
-            // Refresh approvals
-            await fetchApprovals()
+            const data = await response.json()
 
             // Close modal if open
             setModalOpen(false)
 
-            // Navigate to approvals list (already there)
+            // Navigate to results page to show what happened
+            if (data.workflow_id) {
+                router.push(`/results/${data.workflow_id}`)
+            } else {
+                // Fallback: refresh approvals if no workflow_id
+                await fetchApprovals()
+            }
         } catch (error) {
             console.error('Failed to approve:', error)
         }
@@ -189,7 +195,8 @@ export default function ApprovalsPage() {
         } else {
             const preview = item.preview as any
             const count = preview.total_analyzed || preview.totalAnalyzed || 0
-            return `Analysis of ${count} records`
+            const metricCount = preview.metric_count || Object.keys(preview.metrics || {}).length
+            return `Analyzing ${count} records with ${metricCount} ${metricCount === 1 ? 'metric' : 'metrics'}`
         }
     }
 
@@ -274,13 +281,43 @@ export default function ApprovalsPage() {
 
         if (item.template === 'analysis') {
             const preview = item.preview as any
+            const metrics = preview.metrics || {}
+            const recordsCount = preview.total_analyzed || 0
+            const reportSummary = preview.report_summary || `Analysis of ${recordsCount} records`
+
             return (
                 <div>
-                    <h4 className="mb-2 text-sm font-semibold text-white/60">Analysis Results</h4>
-                    <div className="p-4 border rounded-lg bg-white/5 border-white/10">
-                        <pre className="text-sm text-white whitespace-pre-wrap">
-                            {JSON.stringify(preview.metrics || preview, null, 2)}
-                        </pre>
+                    <h4 className="mb-2 text-sm font-semibold text-white/60">Preview</h4>
+                    <p className="mb-4 text-white">{reportSummary}</p>
+
+                    <h4 className="mb-2 text-sm font-semibold text-white/60">Metrics ({Object.keys(metrics).length})</h4>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {Object.entries(metrics).map(([metricName, metricValue]) => (
+                            <div key={metricName} className="p-4 border rounded-lg bg-white/5 border-white/10">
+                                <h5 className="mb-2 text-xs font-semibold uppercase text-white/60">
+                                    {metricName.replace(/_/g, ' ')}
+                                </h5>
+                                {typeof metricValue === 'object' && metricValue !== null && !Array.isArray(metricValue) ? (
+                                    // Grouped metric - show breakdown
+                                    <div className="space-y-1">
+                                        {Object.entries(metricValue as Record<string, any>).slice(0, 5).map(([group, value]) => (
+                                            <div key={group} className="flex items-center justify-between text-sm">
+                                                <span className="text-white/70">{group}</span>
+                                                <span className="font-semibold text-white">{value}</span>
+                                            </div>
+                                        ))}
+                                        {Object.keys(metricValue as Record<string, any>).length > 5 && (
+                                            <p className="text-xs text-white/50">
+                                                +{Object.keys(metricValue as Record<string, any>).length - 5} more
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    // Scalar metric - show single value
+                                    <p className="text-2xl font-bold text-white">{String(metricValue)}</p>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 </div>
             )
@@ -443,6 +480,14 @@ export default function ApprovalsPage() {
                                         <Button onClick={() => handleViewDetails(item.id)} variant="ghost" size="md">
                                             <Eye className="inline-block w-4 h-4 mr-2" />
                                             View Details
+                                        </Button>
+                                    </div>
+                                )}
+                                {activeTab === 'approved' && item.workflowRunId && (
+                                    <div className="flex flex-wrap gap-3 pt-2">
+                                        <Button onClick={() => router.push(`/results/${item.workflowRunId}`)} size="md">
+                                            <CheckCircle2 className="inline-block w-4 h-4 mr-2" />
+                                            View Results
                                         </Button>
                                     </div>
                                 )}

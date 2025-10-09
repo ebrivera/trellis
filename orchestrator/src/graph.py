@@ -21,6 +21,7 @@ from .nodes.debate.extract_params import extract_params_from_winner
 from .nodes.debate import get_agent_configs
 from .graph_executor import generate_preview
 from .database import insert_one, execute as db_execute
+from decimal import Decimal
 
 
 # ============================================================================
@@ -96,14 +97,27 @@ async def create_approval_gate_node(state: Dict[str, Any]) -> Dict[str, Any]:
     
     # Generate preview (dry-run execution)
     preview = await generate_preview(template, params, workflow_id)
-    
+
+    # Helper to serialize preview with Decimal handling
+    def serialize_for_json(obj):
+        """Convert Decimal and other non-serializable types to JSON-safe values"""
+        if isinstance(obj, Decimal):
+            return float(obj)
+        elif isinstance(obj, dict):
+            return {k: serialize_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [serialize_for_json(item) for item in obj]
+        return obj
+
+    preview_serialized = serialize_for_json(preview)
+
     # Create approval_gate
     await insert_one("approval_gates", {
         "id": approval_id,
         "workflow_run_id": workflow_id,
         "gate_type": "assignments",
         "status": "pending",
-        "preview_data": json.dumps(preview),
+        "preview_data": json.dumps(preview_serialized),
         "metrics": json.dumps({
             "debate_vote_tally": debate_state['vote_tally'],
             "winning_agent": debate_state['winning_agent']
