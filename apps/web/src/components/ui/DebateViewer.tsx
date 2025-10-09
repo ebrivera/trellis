@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card } from './Card'
 import { Badge } from './Badge'
 import type { AgentName, DebateMessage } from '@trellis/types'
@@ -59,11 +59,15 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
     const agents: AgentName[] = ['Planner', 'Operations', 'HumanFlourishing']
     const [selectedRound, setSelectedRound] = useState<1 | 2 | 3>(currentRound)
     const [expandedAgent, setExpandedAgent] = useState<AgentName | null>(null)
+    const prevCurrentRound = useRef(currentRound)
 
-    // Update selected round when current round changes
-    if (selectedRound < currentRound) {
-        setSelectedRound(currentRound)
-    }
+    // Update selected round when current round changes (but only forward, not backward)
+    useEffect(() => {
+        if (currentRound > prevCurrentRound.current) {
+            setSelectedRound(currentRound)
+        }
+        prevCurrentRound.current = currentRound
+    }, [currentRound])
     
     return (
         <Card padding="lg" className="bg-white/5">
@@ -169,33 +173,40 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
                 })}
             </div>
 
-            {/* Round Indicator - Now clickable */}
-            <div className="flex items-center justify-center gap-2 mt-6">
-                {[1, 2, 3].map(round => {
-                    const roundNum = round as 1 | 2 | 3
-                    const isActive = selectedRound === roundNum
-                    const isComplete = currentRound > roundNum
-                    const isAvailable = currentRound >= roundNum
-                    
-                    return (
-                        <button
-                            key={round}
-                            onClick={() => isAvailable && setSelectedRound(roundNum)}
-                            disabled={!isAvailable}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                                isActive
-                                    ? 'bg-white text-black'
-                                    : isComplete
-                                    ? 'bg-green-400/20 text-green-400 hover:bg-green-400/30 cursor-pointer'
-                                    : isAvailable
-                                    ? 'bg-white/10 text-white/50'
-                                    : 'bg-white/5 text-white/30 cursor-not-allowed'
-                            }`}
-                        >
-                            Round {round}
-                        </button>
-                    )
-                })}
+            {/* Round Navigation */}
+            <div className="mt-6">
+                <div className="text-center mb-3">
+                    <p className="text-sm text-white/70">
+                        Navigate between debate rounds to see what each agent was thinking
+                    </p>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                    {[1, 2, 3].map(round => {
+                        const roundNum = round as 1 | 2 | 3
+                        const isActive = selectedRound === roundNum
+                        const isComplete = currentRound > roundNum
+                        const isAvailable = currentRound >= roundNum
+                        
+                        return (
+                            <button
+                                key={round}
+                                onClick={() => isAvailable && setSelectedRound(roundNum)}
+                                disabled={!isAvailable}
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                                    isActive
+                                        ? 'bg-white text-black'
+                                        : isComplete
+                                        ? 'bg-green-400/20 text-green-400 hover:bg-green-400/30 cursor-pointer'
+                                        : isAvailable
+                                        ? 'bg-white/10 text-white/50'
+                                        : 'bg-white/5 text-white/30 cursor-not-allowed'
+                                }`}
+                            >
+                                Round {round}
+                            </button>
+                        )
+                    })}
+                </div>
             </div>
         </Card>
     )
