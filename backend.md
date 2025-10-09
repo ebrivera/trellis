@@ -196,7 +196,7 @@ data: <json>
 - **monitoring** → load df → `filter_by_time_condition` →  
     `{ flagged_count, total_scanned, flagged_preview(≤10), notifications_planned }`
 - **analysis** → load df → `calculate_metrics` →  
-    `{ entities_analyzed, metrics_calculated, insights, recommendations: [] }`
+    `{ total_analyzed, metrics_calculated, insights, recommendations: [] }`
 
 **Execute (writes + side effects):**
 
@@ -217,7 +217,7 @@ data: <json>
 - **analysis**
     1. load df → `calculate_metrics`
     2. (notifications TODO)
-    3. return `{ entities_analyzed, metrics, insights }`
+    3. return `{ total_analyzed, metrics, insights }`
 
 **DB touched:**
 

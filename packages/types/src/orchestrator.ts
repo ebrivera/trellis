@@ -22,9 +22,10 @@ export interface ApprovalGate {
     template: TemplateType // Which of the 3 templates is being used
     status: ApprovalStatus // Current approval state
     createdAt: string // ISO timestamp for audit trail
+    workflow_run_id?: string  // ADD THIS
     params: WorkflowParams // User-provided + AI-extracted parameters
     preview: MatchingPreview | MonitoringPreview | AnalysisPreview // Template-specific preview data
-    metrics: Record<string, number> // High-level metrics for quick decision-making (e.g., fillRate: 0.90)
+    metrics: Record<string, number | string> // High-level metrics for quick decision-making (e.g., fillRate: 0.90)
 }
 
 /**

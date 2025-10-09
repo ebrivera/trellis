@@ -518,6 +518,19 @@ async def get_monthly_metrics():
     }
 
 
+@app.get("/workflow_runs/{workflow_id}")
+async def get_workflow_run(workflow_id: str):
+    """Get workflow run details"""
+    workflow = await fetch_one(
+        "SELECT * FROM workflow_runs WHERE id = $1",
+        workflow_id
+    )
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow run not found")
+    
+    return workflow
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

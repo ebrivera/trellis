@@ -426,7 +426,7 @@ async def execute_analysis(params: Dict[str, Any], workflow_run_id: str) -> Dict
         pass
     
     return {
-        "entities_analyzed": len(df),
+        "total_analyzed": len(df),
         "metrics": metrics_result,
         "insights": []
     }
