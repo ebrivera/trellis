@@ -115,31 +115,41 @@ async def generate_preview(template: TemplateType, params: Dict[str, Any], workf
 async def _preview_matching(params: Dict[str, Any]) -> Dict[str, Any]:
     """Preview matching workflow"""
     from .templates.matching import MatchingParams, MatchFields
-    
+
     # Parse params into Pydantic model
     params_model = MatchingParams(**params)
-    
+
     # ADD THIS: Normalize field names before matching
     normalized_fields = normalize_match_fields(params_model.match_fields)
     params_model.match_fields = MatchFields(**normalized_fields)
-    
+
     # Load data
     source_df = await load_data(
-        EntityType(params_model.source.entity_type), 
+        EntityType(params_model.source.entity_type),
         params_model.source.subtype
     )
     target_df = await load_data(
         EntityType(params_model.target.entity_type),
         params_model.target.subtype
     )
-    
+
+    print(f"\n🔍 DEBUG: Loaded {len(source_df)} source entities ({params_model.source.subtype})")
+    print(f"🔍 DEBUG: Loaded {len(target_df)} target entities ({params_model.target.subtype})")
+
     # Filter
     if params_model.source.filters:
+        print(f"🔍 DEBUG: Applying {len(params_model.source.filters)} source filters...")
+        for f in params_model.source.filters:
+            print(f"   - {f.field} {f.operator} {f.value}")
         source_df = filter_data(source_df, params_model.source.filters)
+        print(f"🔍 DEBUG: After filtering: {len(source_df)} source entities remain")
     if params_model.target.filters:
+        print(f"🔍 DEBUG: Applying {len(params_model.target.filters)} target filters...")
         target_df = filter_data(target_df, params_model.target.filters)
-    
+        print(f"🔍 DEBUG: After filtering: {len(target_df)} target entities remain")
+
     # Match (dry-run)
+    print(f"🔍 DEBUG: Running matching algorithm...")
     assignments = match_func(
         source_df,
         target_df,
@@ -147,6 +157,7 @@ async def _preview_matching(params: Dict[str, Any]) -> Dict[str, Any]:
         params_model.match_fields,
         params_model.constraints
     )
+    print(f"🔍 DEBUG: Matching produced {len(assignments)} assignments")
     
     # Calculate preview metrics
     match_rate = len(assignments) / len(source_df) if len(source_df) > 0 else 0

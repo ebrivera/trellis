@@ -100,6 +100,40 @@ async def orchestrate(request: OrchestrateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/approvals")
+async def get_approvals(status: Optional[str] = None):
+    """
+    Get all approval gates, optionally filtered by status.
+
+    Query params:
+        status: Filter by status ('pending', 'saved', 'approved', 'rejected')
+    """
+    from .database import fetch_all
+
+    if status:
+        approvals = await fetch_all(
+            """
+            SELECT ag.*, wr.template_type, wr.request_text, wr.extracted_params
+            FROM approval_gates ag
+            JOIN workflow_runs wr ON ag.workflow_run_id = wr.id
+            WHERE ag.status = $1
+            ORDER BY ag.created_at DESC
+            """,
+            status
+        )
+    else:
+        approvals = await fetch_all(
+            """
+            SELECT ag.*, wr.template_type, wr.request_text, wr.extracted_params
+            FROM approval_gates ag
+            JOIN workflow_runs wr ON ag.workflow_run_id = wr.id
+            ORDER BY ag.created_at DESC
+            """
+        )
+
+    return {"approvals": approvals}
+
+
 @app.get("/approval/{approval_id}")
 async def get_approval(approval_id: str):
     """
@@ -109,11 +143,40 @@ async def get_approval(approval_id: str):
         "SELECT * FROM approval_gates WHERE id = $1",
         approval_id
     )
-    
+
     if not approval:
         raise HTTPException(status_code=404, detail="Approval not found")
-    
+
     return approval
+
+
+class UpdateApprovalStatus(BaseModel):
+    status: str = Field(..., description="New status: 'pending', 'saved', 'approved', 'rejected'")
+
+
+@app.patch("/approval/{approval_id}")
+async def update_approval_status(approval_id: str, update: UpdateApprovalStatus):
+    """
+    Update approval gate status (e.g., mark as 'saved' for later review).
+    """
+    approval = await fetch_one(
+        "SELECT * FROM approval_gates WHERE id = $1",
+        approval_id
+    )
+
+    if not approval:
+        raise HTTPException(status_code=404, detail="Approval not found")
+
+    # Update status
+    await execute(
+        "UPDATE approval_gates SET status = $1 WHERE id = $2",
+        update.status, approval_id
+    )
+
+    return {
+        "status": "success",
+        "message": f"Approval status updated to '{update.status}'"
+    }
 
 
 @app.post("/approval/{approval_id}/decide")
