@@ -201,14 +201,15 @@ async def decide_approval(approval_id: str, decision: ApprovalDecision):
             "UPDATE approval_gates SET status = $1, approved_at = NOW() WHERE id = $2",
             "approved", approval_id
         )
-        
+
         # Execute workflow
         try:
             result = await execute_workflow(approval_id)
-            
+
             return {
                 "status": "approved",
                 "message": "Workflow executed successfully",
+                "workflow_id": approval['workflow_run_id'],
                 "result": result
             }
         except Exception as e:
@@ -447,53 +448,53 @@ async def get_recent_activity():
 @app.get("/dashboard/monthly-metrics")
 async def get_monthly_metrics():
     from .database import fetch_one
-    
+
     # Workflows completed this month vs last month
     workflows_this_month = await fetch_one("""
-        SELECT COUNT(*) as count 
-        FROM workflow_runs 
-        WHERE status = 'completed' 
+        SELECT COUNT(*) as count
+        FROM workflow_runs
+        WHERE status = 'completed'
         AND completed_at >= DATE_TRUNC('month', CURRENT_DATE)
     """)
-    
+
     workflows_last_month = await fetch_one("""
-        SELECT COUNT(*) as count 
-        FROM workflow_runs 
-        WHERE status = 'completed' 
+        SELECT COUNT(*) as count
+        FROM workflow_runs
+        WHERE status = 'completed'
         AND completed_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
         AND completed_at < DATE_TRUNC('month', CURRENT_DATE)
     """)
-    
+
     # Assignments created this month vs last month
     assignments_this_month = await fetch_one("""
-        SELECT COUNT(*) as count 
-        FROM assignments 
+        SELECT COUNT(*) as count
+        FROM assignments
         WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
     """)
-    
+
     assignments_last_month = await fetch_one("""
-        SELECT COUNT(*) as count 
-        FROM assignments 
+        SELECT COUNT(*) as count
+        FROM assignments
         WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
         AND created_at < DATE_TRUNC('month', CURRENT_DATE)
     """)
-    
+
     # Messages sent this month vs last month
     messages_this_month = await fetch_one("""
-        SELECT COUNT(*) as count 
-        FROM messages 
+        SELECT COUNT(*) as count
+        FROM messages
         WHERE status = 'sent'
         AND created_at >= DATE_TRUNC('month', CURRENT_DATE)
     """)
-    
+
     messages_last_month = await fetch_one("""
-        SELECT COUNT(*) as count 
-        FROM messages 
+        SELECT COUNT(*) as count
+        FROM messages
         WHERE status = 'sent'
         AND created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
         AND created_at < DATE_TRUNC('month', CURRENT_DATE)
     """)
-    
+
     return {
         "metrics": [
             {
@@ -518,18 +519,147 @@ async def get_monthly_metrics():
     }
 
 
-@app.get("/workflow_runs/{workflow_id}")
-async def get_workflow_run(workflow_id: str):
-    """Get workflow run details"""
+# ============================================================================
+# WORKFLOW RESULTS
+# ============================================================================
+
+@app.get("/workflow/{workflow_id}")
+async def get_workflow_result(workflow_id: str):
+    """
+    Get workflow execution results with full context.
+
+    Returns:
+        - Original request
+        - Template type
+        - Winning agent and strategy
+        - Execution results and metrics
+        - Actions taken (assignments, notifications)
+    """
+    from .database import fetch_all
+
+    # Fetch workflow run
     workflow = await fetch_one(
-        "SELECT * FROM workflow_runs WHERE id = $1",
+        """
+        SELECT wr.*, ag.status as approval_status
+        FROM workflow_runs wr
+        LEFT JOIN approval_gates ag ON ag.workflow_run_id = wr.id
+        WHERE wr.id = $1
+        """,
         workflow_id
     )
-    
+
     if not workflow:
-        raise HTTPException(status_code=404, detail="Workflow run not found")
-    
-    return workflow
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    # Parse extracted_params to get winning strategy
+    extracted_params = workflow['extracted_params']
+    if isinstance(extracted_params, str):
+        extracted_params = json.loads(extracted_params)
+
+    # Parse results
+    results = workflow['results']
+    if isinstance(results, str):
+        results = json.loads(results) if results else {}
+
+    # Fetch all people affected by this workflow with their actions
+    # This combines assignments and messages into a person-centric view
+
+    # Debug: Check if messages exist
+    print(f"🔍 DEBUG: Fetching affected people for workflow {workflow_id}")
+    message_count = await fetch_one(
+        "SELECT COUNT(*) as count FROM messages WHERE workflow_run_id = $1",
+        workflow_id
+    )
+    print(f"🔍 DEBUG: Found {message_count['count']} messages for this workflow")
+
+    affected_people = await fetch_all(
+        """
+        WITH workflow_people AS (
+            -- People who received assignments
+            SELECT DISTINCT
+                p.id::text as id,
+                p.name,
+                p.email,
+                p.phone,
+                p.person_type
+            FROM assignments a
+            JOIN people p ON a.source_id = p.id
+            WHERE a.workflow_run_id = $1
+
+            UNION
+
+            -- People who received messages
+            SELECT DISTINCT
+                p.id::text as id,
+                p.name,
+                p.email,
+                p.phone,
+                p.person_type
+            FROM messages m
+            JOIN people p ON m.recipient_id::uuid = p.id
+            WHERE m.workflow_run_id = $1
+        )
+        SELECT
+            wp.*,
+            -- Get their assignments
+            COALESCE(
+                json_agg(
+                    DISTINCT jsonb_build_object(
+                        'assigned_to', COALESCE(p2.name, g.name),
+                        'assignment_type', a.assignment_type,
+                        'match_score', a.match_score,
+                        'status', a.status
+                    )
+                ) FILTER (WHERE a.id IS NOT NULL),
+                '[]'
+            ) as assignments,
+            -- Get their messages
+            COALESCE(
+                json_agg(
+                    DISTINCT jsonb_build_object(
+                        'channel', m.channel,
+                        'status', m.status,
+                        'template', m.template,
+                        'sent_at', m.sent_at
+                    )
+                ) FILTER (WHERE m.id IS NOT NULL),
+                '[]'
+            ) as messages
+        FROM workflow_people wp
+        LEFT JOIN assignments a ON a.source_id::uuid = wp.id::uuid AND a.workflow_run_id = $1
+        LEFT JOIN people p2 ON a.target_id = p2.id AND a.target_type = 'person'
+        LEFT JOIN groups g ON a.target_id = g.id AND a.target_type = 'group'
+        LEFT JOIN messages m ON m.recipient_id::uuid = wp.id::uuid AND m.workflow_run_id = $1
+        GROUP BY wp.id, wp.name, wp.email, wp.phone, wp.person_type
+        ORDER BY wp.name
+        """,
+        workflow_id
+    )
+
+    print(f"🔍 DEBUG: Found {len(affected_people)} affected people")
+    if len(affected_people) > 0:
+        print(f"🔍 DEBUG: First person: {affected_people[0]}")
+    else:
+        print(f"🔍 DEBUG: No affected people found - checking messages table directly...")
+        sample_messages = await fetch_all(
+            "SELECT id, recipient_id, workflow_run_id FROM messages WHERE workflow_run_id = $1 LIMIT 3",
+            workflow_id
+        )
+        print(f"🔍 DEBUG: Sample messages: {sample_messages}")
+
+    return {
+        "id": workflow['id'],
+        "request": workflow['request_text'],
+        "template": workflow['template_type'],
+        "status": workflow['status'],
+        "winning_agent": extracted_params.get('winning_agent', 'Unknown'),
+        "winning_strategy": extracted_params.get('winning_strategy', ''),
+        "results": results,
+        "affected_people": affected_people,
+        "created_at": workflow['started_at'],
+        "completed_at": workflow['completed_at']
+    }
+
 
 if __name__ == "__main__":
     import uvicorn

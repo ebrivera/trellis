@@ -15,6 +15,7 @@ type Message = {
     id: string
     role: 'user' | 'system'
     content: string
+    streaming?: boolean
     approvalPreview?: ApprovalGate
     showActions?: boolean
     debateData?: {
@@ -151,7 +152,8 @@ export default function GoalsPage() {
                 const clarificationMessage: Message = {
                     id: Date.now().toString(),
                     role: 'system',
-                    content: `I need some clarification before proceeding:\n\n**${data.question}**\n\nPlease provide more details so I can create the best plan for you.`
+                    content: `I need some clarification before proceeding:\n\n${data.question}\n\nPlease provide more details so I can create the best plan for you.`,
+                    streaming: true
                 }
                 setMessages(prev => [...prev, clarificationMessage])
                 setIsProcessing(false)
@@ -287,6 +289,50 @@ export default function GoalsPage() {
                 }))
                 
                 console.log('🏆 Winner:', data.winner)
+            })
+
+            eventSource.addEventListener('ethical_veto_total_rejection', (e) => {
+                const data = JSON.parse(e.data)
+                console.log('🚨 Ethical veto - total rejection:', data.agent)
+
+                // Close SSE connection - no execution will happen
+                eventSource.close()
+
+                // Remove "analyzing" message if it still exists
+                setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
+
+                // Add ethical concerns message
+                // The backend already formatted this message nicely, just display it with streaming
+                const ethicalMessage: Message = {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: data.concerns,
+                    streaming: true
+                }
+                setMessages(prev => [...prev, ethicalMessage])
+                setIsProcessing(false)
+            })
+
+            eventSource.addEventListener('ethical_veto_partial_rejection', (e) => {
+                const data = JSON.parse(e.data)
+                console.log('✏️ Ethical veto - partial rejection:', data.agent)
+
+                // Close SSE connection - no execution will happen
+                eventSource.close()
+
+                // Remove "analyzing" message if it still exists
+                setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
+
+                // Add alternative approach message
+                // The backend already formatted this message nicely, just display it with streaming
+                const alternativeMessage: Message = {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: data.concerns,
+                    streaming: true
+                }
+                setMessages(prev => [...prev, alternativeMessage])
+                setIsProcessing(false)
             })
 
             eventSource.addEventListener('preview_ready', async (e) => {
@@ -596,7 +642,7 @@ export default function GoalsPage() {
                     <div className="flex-1 mb-6 space-y-4 overflow-y-auto max-h-[600px]">
                         {messages.map((message) => (
                             <div key={message.id} className="space-y-4">
-                                <ChatMessage role={message.role}>
+                                <ChatMessage role={message.role} streaming={message.streaming}>
                                     {message.content}
                                 </ChatMessage>
 

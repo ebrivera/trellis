@@ -19,9 +19,13 @@ IMPORTANT: person_type has ONLY these values: volunteer, mentor, mentee, visitor
 - If user requests location-based matching, use proximity strategy but leave score_on empty or use only interests
 
 GROUPS TABLE FIELDS:
-- requirements (array): skills/interests needed
+- requirements (array): skills/interests needed (e.g., ['music', 'worship'], ['youth', 'mentoring'])
+  **IMPORTANT: requirements contains SKILL/INTEREST TAGS, NOT day-of-week or time information**
+  **NEVER filter requirements by "availability_days" or "Sunday" - use name/metadata instead**
 - capacity (integer): max members
 - group_type: role, initiative, team, small_group, ministry, class
+- name (string): role/group name (e.g., "Worship Team", "Youth Leader")
+- metadata (jsonb): additional info like time, age_group, location
 
 **Field Mapping Rules:**
 - When users say "skills", "abilities", "talents", or "experience" → use "interests" field
@@ -30,6 +34,12 @@ GROUPS TABLE FIELDS:
 
 - When users say "greeters", "ushers", "teachers" → filter by interests field ("greeting", "hospitality", "teaching")
 - NEVER use functional roles as person_type values
+
+**Day-of-Week Filtering Rules:**
+- "Sunday volunteers" → filter SOURCE by availability_days contains "Sun"
+- "Sunday roles" → filter TARGET by name (e.g., name contains "Sunday") OR leave unfiltered
+- **CRITICAL: NEVER filter roles/groups by requirements containing "availability_days" or day names**
+- Day-of-week filtering applies to PEOPLE (who's available), not GROUPS (what needs to be filled)
 
 ---
 
@@ -286,6 +296,53 @@ Output:
       "recipient_type": "target",
       "channel": "email",
       "template": "Please follow up with {{source_name}}. Contact: {{source_email}}"
+    }
+  ]
+}
+
+Request: "Match 50 volunteers to 10 Sunday roles based on availability"
+Output:
+{
+  "template": "matching",
+  "source": {
+    "entity_type": "people",
+    "subtype": "volunteer",
+    "filters": [
+      {
+        "field": "availability_days",
+        "operator": "contains",
+        "value": "Sun"
+      }
+    ]
+  },
+  "target": {
+    "entity_type": "groups",
+    "subtype": "role",
+    "filters": []
+  },
+  "match_strategy": "interest_overlap",
+  "match_fields": {
+    "score_on": ["interests", "availability_days"],
+    "weights": [
+      {"field": "interests", "weight": 0.5},
+      {"field": "availability_days", "weight": 0.5}
+    ]
+  },
+  "constraints": {
+    "max_per_target": "capacity",
+    "respect_preferences": true,
+    "min_score_threshold": null
+  },
+  "notifications": [
+    {
+      "recipient_type": "source",
+      "channel": "sms",
+      "template": "You're assigned to {{target_name}} for Sunday! Please confirm."
+    },
+    {
+      "recipient_type": "target_owners",
+      "channel": "email",
+      "template": "{{source_name}} has been assigned to your role."
     }
   ]
 }

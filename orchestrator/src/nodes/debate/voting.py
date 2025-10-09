@@ -94,14 +94,25 @@ def _check_for_absolute_veto(debate_state: Dict[str, Any]) -> str:
     """
     # Check proposals for veto language
     for agent_name, proposal in debate_state.get('proposals', {}).items():
-        if proposal and _contains_veto_language(proposal):
-            return agent_name
+        print(f"🔍 Checking {agent_name} proposal for veto... (length: {len(proposal) if proposal else 0})")
+        if proposal:
+            contains_veto = _contains_veto_language(proposal)
+            print(f"   → Contains veto language: {contains_veto}")
+            if contains_veto:
+                print(f"   → VETO DETECTED in {agent_name}'s proposal!")
+                return agent_name
 
     # Check rebuttals for veto language
     for agent_name, rebuttal in debate_state.get('rebuttals', {}).items():
-        if rebuttal and _contains_veto_language(rebuttal):
-            return agent_name
+        print(f"🔍 Checking {agent_name} rebuttal for veto... (length: {len(rebuttal) if rebuttal else 0})")
+        if rebuttal:
+            contains_veto = _contains_veto_language(rebuttal)
+            print(f"   → Contains veto language: {contains_veto}")
+            if contains_veto:
+                print(f"   → VETO DETECTED in {agent_name}'s rebuttal!")
+                return agent_name
 
+    print("   → No veto detected in any proposal or rebuttal")
     return None
 
 
@@ -137,12 +148,21 @@ def _contains_veto_language(text: str) -> bool:
     ]
 
     # Must contain primary veto OR multiple secondary indicators
-    if any(phrase in text_lower for phrase in primary_veto):
+    primary_matched = [phrase for phrase in primary_veto if phrase in text_lower]
+    if primary_matched:
+        print(f"      → Primary veto phrase found: {primary_matched[0]}")
         return True
 
     # Require at least 2 secondary indicators + strong rejection words
-    secondary_count = sum(1 for phrase in secondary_veto if phrase in text_lower)
-    has_rejection = any(word in text_lower for word in ["cannot support", "strongly disagree", "violates", "reject"])
+    secondary_matched = [phrase for phrase in secondary_veto if phrase in text_lower]
+    rejection_matched = [word for word in ["cannot support", "strongly disagree", "violates", "reject"] if word in text_lower]
+
+    secondary_count = len(secondary_matched)
+    has_rejection = len(rejection_matched) > 0
+
+    print(f"      → Secondary matches ({secondary_count}): {secondary_matched}")
+    print(f"      → Rejection words found: {rejection_matched}")
+    print(f"      → Veto triggered: {secondary_count >= 2 and has_rejection}")
 
     return secondary_count >= 2 and has_rejection
 

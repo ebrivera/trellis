@@ -2,8 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { ProfileDropdown } from './ProfileDropdown'
-import { User, Settings, LogOut } from 'lucide-react'
+import { Settings } from 'lucide-react'
 
 export default function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -43,55 +42,35 @@ export default function Navbar() {
                                 )}
                             </button>
 
-                            {/* Profile - Desktop Only */}
-                            <div className="hidden md:block">
-                                <ProfileDropdown />
-                            </div>
+                            {/* Settings - Desktop Only */}
+                            <Link
+                                href="/settings"
+                                className="hidden md:flex items-center justify-center w-10 h-10 text-white transition-transform rounded-lg hover:bg-white/10 hover:scale-105"
+                                aria-label="Settings"
+                            >
+                                <Settings className="w-6 h-6" />
+                            </Link>
                         </div>
                     </div>
 
                     {/* Mobile Menu Dropdown */}
                     {mobileMenuOpen && (
                         <div className="border-t md:hidden border-white/20">
-                            <div className="flex flex-col p-4 space-y-4">
+                            <div className="flex flex-col gap-1 p-4">
                                 {/* Navigation Links */}
-                                <div className="flex flex-col gap-1">
-                                    <MobileNavLink href="/" onClick={() => setMobileMenuOpen(false)}>
-                                        Dashboard
-                                    </MobileNavLink>
-                                    <MobileNavLink href="/plan" onClick={() => setMobileMenuOpen(false)}>
-                                        Plan
-                                    </MobileNavLink>
-                                    <MobileNavLink href="/approvals" onClick={() => setMobileMenuOpen(false)}>
-                                        Approvals
-                                    </MobileNavLink>
-                                </div>
-
-                                {/* Profile Section */}
-                                <div className="pt-3 border-t border-white/20">
-                                    <div className="px-4 py-2 mb-2">
-                                        <p className="font-semibold text-white">Pastor John</p>
-                                        <p className="text-sm text-white/60">john@church.org</p>
-                                    </div>
-                                    <div className="flex flex-col gap-1">
-                                        <MobileNavLink href="/profile" onClick={() => setMobileMenuOpen(false)}>
-                                            <User className="inline-block w-4 h-4 mr-2" />
-                                            Profile
-                                        </MobileNavLink>
-                                        <MobileNavLink href="/settings" onClick={() => setMobileMenuOpen(false)}>
-                                            <Settings className="inline-block w-4 h-4 mr-2" />
-                                            Settings
-                                        </MobileNavLink>
-                                        <MobileNavLink 
-                                            href="/" 
-                                            onClick={() => setMobileMenuOpen(false)}
-                                            className="text-red-400"
-                                        >
-                                            <LogOut className="inline-block w-4 h-4 mr-2" />
-                                            Log Out
-                                        </MobileNavLink>
-                                    </div>
-                                </div>
+                                <MobileNavLink href="/" onClick={() => setMobileMenuOpen(false)}>
+                                    Dashboard
+                                </MobileNavLink>
+                                <MobileNavLink href="/plan" onClick={() => setMobileMenuOpen(false)}>
+                                    Plan
+                                </MobileNavLink>
+                                <MobileNavLink href="/approvals" onClick={() => setMobileMenuOpen(false)}>
+                                    Approvals
+                                </MobileNavLink>
+                                <MobileNavLink href="/settings" onClick={() => setMobileMenuOpen(false)}>
+                                    <Settings className="inline-block w-4 h-4 mr-2" />
+                                    Settings
+                                </MobileNavLink>
                             </div>
                         </div>
                     )}

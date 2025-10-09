@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Card } from './Card'
 import { Badge } from './Badge'
-import { DebateMessageModal } from './DebateMessageModal'
+import { StreamingText } from './StreamingText'
 import type { AgentName, DebateMessage } from '@trellis/types'
 
 const AGENT_CONFIGS: Record<AgentName, {
@@ -104,7 +104,7 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
                         >
                             {/* Winner shimmer overlay */}
                             {isWinner && (
-                                <div className="absolute inset-0 animate-winnerShimmer pointer-events-none" />
+                                <div className="absolute inset-0 pointer-events-none animate-winnerShimmer" />
                             )}
                             {/* Agent Header */}
                             <div className="mb-4">
@@ -120,7 +120,7 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
                                     {isWinner && (
                                         <Badge 
                                             variant="warning"
-                                            className="animate-badgeBounce relative overflow-hidden"
+                                            className="relative overflow-hidden animate-badgeBounce"
                                         >
                                             <span className="relative z-10 flex items-center gap-1">
                                                 <span className="animate-spin">🏆</span>
@@ -139,30 +139,26 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
                             <div className="flex-1">
                                 {hasMessages ? (
                                     roundMessages.map((msg, idx) => {
-                                        const isTruncated = msg.content.length > 200
-                                        const displayContent = isTruncated 
-                                            ? `${msg.content.slice(0, 200)}...`
-                                            : msg.content
+                                        // Stream if this is the latest message in the current round
+                                        const isLatestMessage = idx === roundMessages.length - 1
+                                        const isCurrentRound = msg.round === currentRound
+                                        const shouldStream = isLatestMessage && isCurrentRound && selectedRound === currentRound
 
                                         return (
-                                            <div 
+                                            <div
                                                 key={idx}
                                                 className="p-3 border rounded-lg bg-white/5 border-white/10 animate-fadeIn"
                                             >
                                                 <div className="mb-1 text-xs font-medium text-white/70">
                                                     Round {msg.round}: {msg.messageType}
                                                 </div>
-                                                <p className="text-sm text-white/90">
-                                                    {displayContent}
-                                                </p>
-                                                {isTruncated && (
-                                                    <button
-                                                        onClick={() => setModalMessage({ agent, message: msg })}
-                                                        className="mt-2 text-xs text-blue-400 hover:text-blue-300"
-                                                    >
-                                                        + Show more
-                                                    </button>
-                                                )}
+                                                <div className="text-sm whitespace-pre-wrap text-white/90">
+                                                    {shouldStream ? (
+                                                        <StreamingText text={msg.content} speed={15} />
+                                                    ) : (
+                                                        msg.content
+                                                    )}
+                                                </div>
                                             </div>
                                         )
                                     })
@@ -188,7 +184,7 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
 
             {/* Round Navigation */}
             <div className="mt-6">
-                <div className="text-center mb-3">
+                <div className="mb-3 text-center">
                     <p className="text-sm text-white/70">
                         Navigate between debate rounds to see what each agent was thinking
                     </p>
@@ -221,16 +217,6 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
                     })}
                 </div>
             </div>
-
-            {/* Modal for full message content */}
-            {modalMessage && (
-                <DebateMessageModal
-                    isOpen={!!modalMessage}
-                    onClose={() => setModalMessage(null)}
-                    agent={modalMessage.agent}
-                    message={modalMessage.message}
-                />
-            )}
         </Card>
     )
 }
