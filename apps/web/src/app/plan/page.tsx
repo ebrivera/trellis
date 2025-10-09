@@ -38,7 +38,7 @@ export default function GoalsPage() {
         {
             id: '1',
             role: 'system',
-            content: 'Hi! I\'m Trellis. Describe what you want to accomplish, and I\'ll help you create a structured plan with all the necessary steps.',
+            content: 'Hi! I\'m Foundry. Describe what you want to accomplish, and I\'ll help you create a structured plan with all the necessary steps.',
         },
     ])
     const [input, setInput] = useState('')
@@ -542,9 +542,9 @@ export default function GoalsPage() {
             <div className="flex flex-col flex-1 w-full mx-auto max-w-7xl">
                 {/* Header */}
                 <header className="mb-8">
-                    <h1 className="mb-2 text-4xl font-bold text-white">Plan with Trellis</h1>
+                    <h1 className="mb-2 text-4xl font-bold text-white">Plan with Foundry</h1>
                     <p className="text-lg text-white/70">
-                        Describe what you want to accomplish — Trellis will draft a plan for you.
+                        Describe what you want to accomplish — Foundry will draft a plan for you.
                     </p>
                     <p className="mt-2 text-sm text-white/50">
                         e.g., &ldquo;Plan fall groups by ZIP, balance capacity, and draft leader/member messages&rdquo;
@@ -630,7 +630,7 @@ export default function GoalsPage() {
                                     <div className="w-2 h-2 bg-white rounded-full animate-bounce" />
                                     <div className="w-2 h-2 bg-white rounded-full animate-bounce [animation-delay:0.2s]" />
                                     <div className="w-2 h-2 bg-white rounded-full animate-bounce [animation-delay:0.4s]" />
-                                    <span className="ml-2 text-white/70">Trellis is preparing your plan...</span>
+                                    <span className="ml-2 text-white/70">Foundry is preparing your plan...</span>
                                 </div>
                             </ChatMessage>
                         )}
@@ -645,7 +645,7 @@ export default function GoalsPage() {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyPress={handleKeyPress}
-                            placeholder="Ask Trellis to plan something..."
+                            placeholder="Ask Foundry to plan something..."
                             disabled={isProcessing}
                             className="flex-1 px-6 py-4 text-white transition-colors border placeholder-white/50 rounded-3xl bg-white/5 border-white/20 focus:outline-none focus:border-white/40 disabled:opacity-50"
                         />

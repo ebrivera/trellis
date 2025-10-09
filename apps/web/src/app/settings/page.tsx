@@ -151,7 +151,7 @@ export default function SettingsPage() {
             <Card padding="lg">
               <div className="space-y-4">
                 <p className="text-sm text-white/60">
-                  Connect Trellis to your existing tools for seamless data sync.
+                  Connect Foundry to your existing tools for seamless data sync.
                 </p>
 
                 <ConnectorItem

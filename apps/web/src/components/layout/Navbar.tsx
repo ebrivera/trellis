@@ -14,7 +14,7 @@ export default function Navbar() {
                     <div className="flex items-center justify-between h-16 gap-4 px-6">
                         {/* Logo */}
                         <Link href="/" className="flex items-center gap-2 shrink-0">
-                            <span className="text-lg font-semibold text-white">trellis.</span>
+                            <span className="text-lg font-semibold text-white">foundry.</span>
                         </Link>
 
                         {/* Nav Items - Desktop */}
