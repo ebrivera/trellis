@@ -1,13 +1,15 @@
 import { ReactNode } from 'react'
 import { cn } from '../../lib/utils'
+import { StreamingText } from './StreamingText'
 
 interface ChatMessageProps {
   role: 'user' | 'system'
   children: ReactNode
   className?: string
+  streaming?: boolean
 }
 
-export function ChatMessage({ role, children, className }: ChatMessageProps) {
+export function ChatMessage({ role, children, className, streaming = false }: ChatMessageProps) {
   return (
     <div
       className={cn(
@@ -24,7 +26,11 @@ export function ChatMessage({ role, children, className }: ChatMessageProps) {
             : 'bg-white/10 backdrop-blur-xl border border-white/20 text-white'
         )}
       >
-        {children}
+        {streaming && typeof children === 'string' ? (
+          <StreamingText text={children} speed={15} />
+        ) : (
+          children
+        )}
       </div>
     </div>
   )

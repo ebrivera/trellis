@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Card } from './Card'
 import { Badge } from './Badge'
+import { StreamingText } from './StreamingText'
 import type { AgentName, DebateMessage } from '@trellis/types'
 
 const AGENT_CONFIGS: Record<AgentName, {
@@ -58,7 +59,6 @@ interface DebateViewerProps {
 export function DebateViewer({ messages, currentRound, winner, voteTally }: DebateViewerProps) {
     const agents: AgentName[] = ['Planner', 'Operations', 'HumanFlourishing']
     const [selectedRound, setSelectedRound] = useState<1 | 2 | 3>(currentRound)
-    const [expandedAgent, setExpandedAgent] = useState<AgentName | null>(null)
 
     // Update selected round when current round changes
     if (selectedRound < currentRound) {
@@ -121,31 +121,26 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
                             <div className="flex-1">
                                 {hasMessages ? (
                                     roundMessages.map((msg, idx) => {
-                                        const isExpanded = expandedAgent === agent
-                                        const isTruncated = msg.content.length > 200
-                                        const displayContent = isExpanded || !isTruncated 
-                                            ? msg.content 
-                                            : `${msg.content.slice(0, 200)}...`
+                                        // Stream if this is the latest message in the current round
+                                        const isLatestMessage = idx === roundMessages.length - 1
+                                        const isCurrentRound = msg.round === currentRound
+                                        const shouldStream = isLatestMessage && isCurrentRound && selectedRound === currentRound
 
                                         return (
-                                            <div 
+                                            <div
                                                 key={idx}
                                                 className="p-3 border rounded-lg bg-white/5 border-white/10 animate-fadeIn"
                                             >
                                                 <div className="mb-1 text-xs font-medium text-white/70">
                                                     Round {msg.round}: {msg.messageType}
                                                 </div>
-                                                <p className="text-sm text-white/90">
-                                                    {displayContent}
-                                                </p>
-                                                {isTruncated && (
-                                                    <button
-                                                        onClick={() => setExpandedAgent(isExpanded ? null : agent)}
-                                                        className="mt-2 text-xs text-blue-400 hover:text-blue-300"
-                                                    >
-                                                        {isExpanded ? '− Show less' : '+ Show more'}
-                                                    </button>
-                                                )}
+                                                <div className="text-sm text-white/90 whitespace-pre-wrap">
+                                                    {shouldStream ? (
+                                                        <StreamingText text={msg.content} speed={15} />
+                                                    ) : (
+                                                        msg.content
+                                                    )}
+                                                </div>
                                             </div>
                                         )
                                     })
