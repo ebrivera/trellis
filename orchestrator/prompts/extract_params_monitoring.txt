@@ -14,7 +14,8 @@ Your job is to extract:
 
 1. SOURCE - What to monitor?
    - entity_type: "people" or "gifts"
-   - Filters to narrow down (e.g., person_type = 'visitor')
+   - subtype: person_type (volunteer, visitor, donor) - use this to filter by type
+   - filters: Additional FilterCondition objects (optional)
 
 2. CONDITION - What triggers the alert?
    - time_field: Which date field to check (visit_date, gift_date, last_contact_date)
@@ -53,7 +54,8 @@ Output:
   "template": "monitoring",
   "source": {
     "entity_type": "people",
-    "filters": ["person_type = 'visitor'"]
+    "subtype": "visitor",
+    "filters": []
   },
   "condition": {
     "time_field": "visit_date",

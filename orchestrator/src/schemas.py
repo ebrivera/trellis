@@ -127,7 +127,7 @@ class EntityQuery(BaseModel):
     entity_type: EntityType = Field(..., description="Which table to query (people, groups, gifts)")
     subtype: Optional[str] = Field(
         default=None,
-        description="Row filter: person_type (volunteer, visitor, mentor, mentee, donor) or group_type (role, initiative, team)"
+        description="Row filter: person_type (volunteer, visitor, mentor, mentee, donor, leader) or group_type (role, initiative, team, small_group, ministry, class)"
     )
     filters: Optional[List[FilterCondition]] = Field(
         default=None,
@@ -150,7 +150,7 @@ class EntityQuery(BaseModel):
 
         # Valid group subtypes
         elif entity_type == EntityType.GROUP:
-            valid_subtypes = ['role', 'initiative', 'team']
+            valid_subtypes = ['role', 'initiative', 'team', 'small_group', 'ministry', 'class']
             if v not in valid_subtypes:
                 raise ValueError(f"Invalid group_type: {v}. Must be one of {valid_subtypes}")
 

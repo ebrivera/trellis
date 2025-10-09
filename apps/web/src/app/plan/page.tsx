@@ -10,7 +10,7 @@ import { DebateViewer } from '../../components/ui/DebateViewer'
 import { CheckCircle, Edit, X, Users, Clock, TrendingUp, AlertTriangle } from 'lucide-react'
 import type { ApprovalGate, MatchingPreview, MonitoringPreview, AnalysisPreview, AgentName, DebateMessage } from '@trellis/types'
 // MOCK: Import mock data - backend will replace with API calls
-import { mockMatchingApproval, mockMonitoringApproval, mockAnalysisApproval } from '../../lib/mockData'
+// import { mockMatchingApproval, mockMonitoringApproval, mockAnalysisApproval } from '../../lib/mockData'
 
 type Message = {
     id: string
@@ -80,6 +80,9 @@ export default function GoalsPage() {
         setMessages((prev) => [...prev, userMessage])
         setInput('')
         setIsProcessing(true)
+    
+        // Track winner locally for use in callbacks
+        let debateWinner: AgentName | undefined
     
         // Reset debate state
         setDebateMessages({
@@ -212,6 +215,11 @@ export default function GoalsPage() {
             eventSource.addEventListener('voting_complete', (e) => {
                 const data = JSON.parse(e.data)
                 
+                // Store winner for later use
+                debateWinner = data.winner
+                setWinner(data.winner)
+                setVoteTally(data.voteTally)
+                
                 setMessages(prev => prev.map(msg => {
                     if (msg.id === debateMessageId && msg.debateData) {
                         return {
@@ -239,11 +247,34 @@ export default function GoalsPage() {
                 const approvalResponse = await fetch(`http://localhost:8000/approval/${data.approvalId}`)
                 const approval = await approvalResponse.json()
                 
+                // Extract numeric metrics based on template
+                let numericMetrics: Record<string, number> = {}
+                if (data.template === 'matching') {
+                    numericMetrics = {
+                        'Proposed Assignments': data.preview.proposed_assignments,
+                        'Match Rate': Math.round(data.preview.match_rate * 100),
+                        'Avg Match Score': Math.round(data.preview.avg_match_score * 100),
+                        'Notifications Planned': data.preview.notifications_planned
+                    }
+                } else if (data.template === 'monitoring') {
+                    numericMetrics = {
+                        'Flagged Count': data.preview.flagged_count,
+                        'Total Scanned': data.preview.total_scanned,
+                        'Notifications Planned': data.preview.notifications_planned
+                    }
+                } else if (data.template === 'analysis') {
+                    numericMetrics = {
+                        'Total Analyzed': data.preview.total_analyzed || 0,
+                        'Metrics Calculated': Object.keys(data.preview.metrics || {}).length,
+                        'Dimensions': data.preview.dimensions?.length || 0
+                    }
+                }
+                
                 // Add approval message (debate message stays in history!)
                 const approvalMessage: Message = {
                     id: (Date.now() + 3).toString(),
                     role: 'system',
-                    content: `Debate complete! ${data.winner} won. Here's the preview:`,
+                    content: `Debate complete! ${debateWinner || 'The winning agent'} won. Here's the preview:`,
                     approvalPreview: {
                         id: data.approvalId,
                         template: data.template,
@@ -254,7 +285,7 @@ export default function GoalsPage() {
                             targetFile: 'roles'
                         },
                         preview: data.preview,
-                        metrics: data.preview
+                        metrics: numericMetrics
                     },
                     showActions: true
                 }
@@ -270,7 +301,7 @@ export default function GoalsPage() {
                         targetFile: 'roles'
                     },
                     preview: data.preview,
-                    metrics: data.preview
+                    metrics: numericMetrics
                 })
                 setIsProcessing(false)
             })
@@ -345,7 +376,7 @@ export default function GoalsPage() {
 
     return (
         <main className="flex flex-col min-h-screen px-6 pt-32 pb-6">
-            <div className="flex flex-col flex-1 w-full max-w-7xl mx-auto">
+            <div className="flex flex-col flex-1 w-full mx-auto max-w-7xl">
                 {/* Header */}
                 <header className="mb-8">
                     <h1 className="mb-2 text-4xl font-bold text-white">Plan with Trellis</h1>
@@ -509,9 +540,9 @@ export default function GoalsPage() {
                                                         {message.approvalPreview.template.charAt(0).toUpperCase() + message.approvalPreview.template.slice(1)} Template
                                                     </Badge>
                                                     <h3 className="text-xl font-bold text-white">
-                                                        {message.approvalPreview.template === 'matching' && `Match ${(message.approvalPreview.preview as MatchingPreview).assignments_preview.length} assignments`}
-                                                        {message.approvalPreview.template === 'monitoring' && `Monitor ${(message.approvalPreview.preview as MonitoringPreview).flaggedItems.length} flagged items`}
-                                                        {message.approvalPreview.template === 'analysis' && `Analyze ${(message.approvalPreview.preview as AnalysisPreview).dimensions.length} dimensions`}
+                                                        {message.approvalPreview.template === 'matching' && `Match ${(message.approvalPreview.preview as MatchingPreview).assignments_preview?.length || 0} assignments`}
+                                                        {message.approvalPreview.template === 'monitoring' && `Monitor ${(message.approvalPreview.preview as MonitoringPreview).flagged_count || 0} flagged entities`}
+                                                        {message.approvalPreview.template === 'analysis' && `Analyze ${(message.approvalPreview.preview as AnalysisPreview).total_analyzed || 0} records`}
                                                     </h3>
                                                 </div>
                                                 <span className="px-3 py-1 text-xs font-medium text-yellow-400 border rounded-full border-yellow-400/30 bg-yellow-400/10 shrink-0">
@@ -527,18 +558,21 @@ export default function GoalsPage() {
                                                     {message.approvalPreview.template === 'analysis' && <TrendingUp className="w-5 h-5 text-green-400 shrink-0 mt-0.5" />}
                                                     <div className="flex-1">
                                                         <p className="mb-2 text-sm text-white/80">
-                                                            {message.approvalPreview.template === 'matching' && `${(message.approvalPreview.preview as MatchingPreview).assignments_preview.length} proposed assignments from ${message.approvalPreview.params.sourceFile}${message.approvalPreview.params.targetFile ? ` to ${message.approvalPreview.params.targetFile}` : ''}`}
-                                                            {message.approvalPreview.template === 'monitoring' && `${(message.approvalPreview.preview as MonitoringPreview).flaggedItems.length} items flagged: ${(message.approvalPreview.preview as MonitoringPreview).condition}`}
-                                                            {message.approvalPreview.template === 'analysis' && `Analysis of ${(message.approvalPreview.preview as AnalysisPreview).totalAnalyzed} records with ${(message.approvalPreview.preview as AnalysisPreview).lapsedItems.length} items requiring attention`}
+                                                            {message.approvalPreview.template === 'matching' && `${(message.approvalPreview.preview as MatchingPreview).assignments_preview?.length || 0} proposed assignments from ${message.approvalPreview.params.sourceFile}${message.approvalPreview.params.targetFile ? ` to ${message.approvalPreview.params.targetFile}` : ''}`}
+                                                            {message.approvalPreview.template === 'monitoring' && `${(message.approvalPreview.preview as MonitoringPreview).flagged_count || 0} entities flagged based on time conditions`}
+                                                            {message.approvalPreview.template === 'analysis' && `Analysis of ${(message.approvalPreview.preview as AnalysisPreview).total_analyzed || 0} records with ${Object.keys((message.approvalPreview.preview as AnalysisPreview).metrics || {}).length} calculated metrics`}
                                                         </p>
                                                         {/* Show key metrics */}
                                                         <div className="flex flex-wrap gap-3 text-xs">
-                                                            {Object.entries(message.approvalPreview.metrics).slice(0, 3).map(([key, value]) => (
-                                                                <div key={key} className="flex items-center gap-1">
-                                                                    <span className="text-white/50">{key}:</span>
-                                                                    <span className="font-semibold text-white">{value}</span>
-                                                                </div>
-                                                            ))}
+                                                            {Object.entries(message.approvalPreview.metrics)
+                                                                .filter(([key, value]) => typeof value === 'number' || typeof value === 'string')
+                                                                .slice(0, 3)
+                                                                .map(([key, value]) => (
+                                                                    <div key={key} className="flex items-center gap-1">
+                                                                        <span className="text-white/50">{key}:</span>
+                                                                        <span className="font-semibold text-white">{value}</span>
+                                                                    </div>
+                                                                ))}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -546,11 +580,11 @@ export default function GoalsPage() {
                                                 {/* Warnings/Unmatched items */}
                                                 {message.approvalPreview.template === 'matching' && 
                                                 (message.approvalPreview.preview as MatchingPreview).unmatched && 
-                                                (message.approvalPreview.preview as MatchingPreview).unmatched!.length > 0 && (
+                                                ((message.approvalPreview.preview as MatchingPreview).unmatched?.length || 0) > 0 && (
                                                     <div className="flex items-start gap-2 p-2 mt-2 border rounded bg-yellow-400/10 border-yellow-400/20">
                                                         <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
                                                         <p className="text-xs text-yellow-300">
-                                                            {(message.approvalPreview.preview as MatchingPreview).unmatched!.length} items couldn&apos;t be matched
+                                                            {(message.approvalPreview.preview as MatchingPreview).unmatched?.length || 0} items couldn&apos;t be matched
                                                         </p>
                                                     </div>
                                                 )}

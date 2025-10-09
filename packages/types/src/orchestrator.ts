@@ -99,9 +99,10 @@ export interface UnmatchedItem {
  * Design: Focus on "who needs attention" with clear time indicators
  */
 export interface MonitoringPreview {
-    flaggedItems: FlaggedItem[] // Items that matched the condition (e.g., 7 visitors)
-    alertRecipients: string[] // Who gets notified (e.g., ["pastor@church.org"])
-    condition: string // Human-readable filter (e.g., "Visited >14 days ago with no follow-up")
+    flagged_count: number
+    total_scanned: number
+    flagged_preview: FlaggedItem[]
+    notifications_planned: number
 }
 
 /**
@@ -124,9 +125,10 @@ export interface FlaggedItem {
  * Design: Dashboard-style with progress bars + list of items needing attention
  */
 export interface AnalysisPreview {
+    total_analyzed: number // Total records processed (for context)
     dimensions: AnalysisDimension[] // Grouped metrics (e.g., 5 initiatives with progress)
-    lapsedItems: LapsedItem[] // Outliers needing attention (e.g., 23 lapsed donors)
-    totalAnalyzed: number // Total records processed (for context)
+    lapsed_items: LapsedItem[] // Outliers needing attention (e.g., 23 lapsed donors)
+    metrics: Record<string, any> // Calculated metric values
 }
 
 /**

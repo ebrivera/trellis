@@ -11,7 +11,9 @@ Your job is to extract:
 
 1. SOURCES - What data to analyze?
    - Multiple sources allowed (e.g., gifts + initiatives)
-   - entity_type for each source
+   - entity_type: "people", "groups", or "gifts"
+   - subtype: person_type (volunteer, visitor, donor) or group_type (role, initiative, team)
+   - filters: Additional FilterCondition objects (optional)
 
 2. JOIN_ON - How to relate multiple sources?
    - Field name that exists in both tables (e.g., initiative_id, donor_id)
@@ -53,8 +55,8 @@ Output:
   "template": "analysis",
   "sources": [
     {"entity_type": "gifts"},
-    {"entity_type": "groups", "filters": ["group_type = 'initiative'"]}
-  ],
+    {"entity_type": "groups", "subtype": "initiative"}
+  ]
   "join_on": "initiative_id",
   "metrics": [
     {
@@ -98,8 +100,8 @@ Output:
 {
   "template": "analysis",
   "sources": [
-    {"entity_type": "people", "filters": ["person_type = 'volunteer'"]},
-    {"entity_type": "groups", "filters": ["group_type = 'role'"]}
+    {"entity_type": "people", "subtype": "volunteer"},
+    {"entity_type": "groups", "subtype": "role"}
   ],
   "join_on": "assignments.target_id",
   "metrics": [

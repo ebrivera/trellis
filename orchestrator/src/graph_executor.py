@@ -5,8 +5,6 @@ Separated from debate graph for clean separation of concerns
 
 import json
 from typing import Dict, Any
-from uuid import uuid4
-import pandas as pd
 
 from .database import insert_one, fetch_one, execute as db_execute, insert_many
 from .schemas import TemplateType, EntityType
@@ -16,6 +14,28 @@ from .functions.filter import filter_data, filter_by_time_condition
 from .functions.match import match as match_func
 from .functions.send_notification import send_notification
 from .functions.calculate_metrics import calculate_metrics
+
+from uuid import UUID
+from datetime import datetime, date
+import pandas as pd
+
+def _serialize_preview(preview: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert non-JSON-serializable objects (UUID, Timestamp) to strings"""
+    
+    def convert_value(v):
+        if isinstance(v, UUID):
+            return str(v)
+        elif isinstance(v, (datetime, date, pd.Timestamp)):
+            return v.isoformat() if hasattr(v, 'isoformat') else str(v)
+        elif isinstance(v, list):
+            return [convert_value(item) for item in v]
+        elif isinstance(v, dict):
+            return {k: convert_value(val) for k, val in v.items()}
+        elif pd.isna(v):  # Handle pandas NaN/NaT
+            return None
+        return v
+    
+    return {k: convert_value(v) for k, v in preview.items()}
 
 # ============================================================================
 # FIELD MAPPING: SAFETY NET FOR AI
@@ -92,7 +112,6 @@ async def generate_preview(template: TemplateType, params: Dict[str, Any], workf
             "target_count": 0
         }
 
-
 async def _preview_matching(params: Dict[str, Any]) -> Dict[str, Any]:
     """Preview matching workflow"""
     from .templates.matching import MatchingParams, MatchFields
@@ -133,7 +152,7 @@ async def _preview_matching(params: Dict[str, Any]) -> Dict[str, Any]:
     match_rate = len(assignments) / len(source_df) if len(source_df) > 0 else 0
     avg_score = sum(a['match_score'] for a in assignments) / len(assignments) if assignments else 0
     
-    return {
+    return _serialize_preview({
         "proposed_assignments": len(assignments),
         "match_rate": round(match_rate, 2),
         "avg_match_score": round(avg_score, 2),
@@ -141,8 +160,7 @@ async def _preview_matching(params: Dict[str, Any]) -> Dict[str, Any]:
         "source_count": len(source_df),
         "target_count": len(target_df),
         "notifications_planned": len(assignments) * len(params_model.notifications)
-    }
-
+    })
 
 async def _preview_monitoring(params: Dict[str, Any]) -> Dict[str, Any]:
     """Preview monitoring workflow"""
@@ -152,23 +170,23 @@ async def _preview_monitoring(params: Dict[str, Any]) -> Dict[str, Any]:
     
     # Load and filter by time condition
     df = await load_data(
-        EntityType(params_model.entity_query.entity_type),
-        params_model.entity_query.subtype
+    EntityType(params_model.source.entity_type),
+    params_model.source.subtype
     )
-    
+
     flagged = filter_by_time_condition(
         df,
-        params_model.time_condition.field,
-        params_model.time_condition.threshold_days,
-        params_model.time_condition.comparison
+        params_model.condition.time_field,
+        params_model.condition.threshold,
+        params_model.condition.operator
     )
     
-    return {
+    return _serialize_preview({
         "flagged_count": len(flagged),
         "total_scanned": len(df),
         "flagged_preview": flagged.head(10).to_dict('records'),
-        "notifications_planned": len(flagged) * len(params_model.notifications)
-    }
+        "notifications_planned": len(flagged) * len(params_model.alerts)
+    })
 
 
 async def _preview_analysis(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -177,21 +195,22 @@ async def _preview_analysis(params: Dict[str, Any]) -> Dict[str, Any]:
     
     params_model = AnalysisParams(**params)
     
-    # Load data
+    # Load data from first source (TODO: Support multiple sources with joins)
+    first_source = params_model.sources[0]
     df = await load_data(
-        EntityType(params_model.entity_query.entity_type),
-        params_model.entity_query.subtype
+        EntityType(first_source.entity_type),
+        first_source.subtype
     )
     
     # Calculate metrics
-    metrics_result = calculate_metrics(params_model.metrics, df, df)
+    metrics_result = calculate_metrics(params_model.metrics, df)
     
-    return {
-        "entities_analyzed": len(df),
-        "metrics_calculated": metrics_result.get('metrics', {}),
-        "insights": metrics_result.get('insights', []),
-        "recommendations": []  # TODO: Add recommendation logic
-    }
+    return _serialize_preview({
+        "total_analyzed": len(df),
+        "dimensions": [],  # TODO: Implement dimension grouping
+        "lapsed_items": [],  # TODO: Implement lapsed item detection
+        "metrics": metrics_result
+    })
 
 
 # ============================================================================
@@ -347,20 +366,20 @@ async def execute_monitoring(params: Dict[str, Any], workflow_run_id: str) -> Di
     
     # Load and filter
     df = await load_data(
-        EntityType(params_model.entity_query.entity_type),
-        params_model.entity_query.subtype
+        EntityType(params_model.source.entity_type),
+        params_model.source.subtype
     )
-    
+
     flagged = filter_by_time_condition(
         df,
-        params_model.time_condition.field,
-        params_model.time_condition.threshold_days,
-        params_model.time_condition.comparison
+        params_model.condition.time_field,
+        params_model.condition.threshold,
+        params_model.condition.operator
     )
     
     # Send notifications
     notification_results = []
-    for notif_config in params_model.notifications:
+    for notif_config in params_model.alerts:
         recipients = flagged.to_dict('records')
         if recipients:
             result = await send_notification(recipients, notif_config, {})
@@ -378,14 +397,15 @@ async def execute_analysis(params: Dict[str, Any], workflow_run_id: str) -> Dict
     
     params_model = AnalysisParams(**params)
     
-    # Load data
+    # Load data from first source (TODO: Support multiple sources with joins)
+    first_source = params_model.sources[0]
     df = await load_data(
-        EntityType(params_model.entity_query.entity_type),
-        params_model.entity_query.subtype
+        EntityType(first_source.entity_type),
+        first_source.subtype
     )
     
     # Calculate metrics
-    metrics_result = calculate_metrics(params_model.metrics, df, df)
+    metrics_result = calculate_metrics(params_model.metrics, df)
     
     # Send report notification (if configured)
     notification_results = []
@@ -396,6 +416,6 @@ async def execute_analysis(params: Dict[str, Any], workflow_run_id: str) -> Dict
     
     return {
         "entities_analyzed": len(df),
-        "metrics": metrics_result.get('metrics', {}),
-        "insights": metrics_result.get('insights', [])
+        "metrics": metrics_result,
+        "insights": []
     }

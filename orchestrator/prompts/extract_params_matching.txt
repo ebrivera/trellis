@@ -8,13 +8,13 @@ PEOPLE TABLE FIELDS:
 - interests (array): e.g., ['music', 'youth', 'teaching']
 - availability_days (array): e.g., ['Sun', 'Mon', 'Wed']
 - capacity (integer): for mentors/leaders
-- person_type: volunteer, mentor, mentee, visitor, donor
+- person_type: volunteer, mentor, mentee, visitor, donor, leader
 - zip (in metadata): location
 
 GROUPS TABLE FIELDS:
 - requirements (array): skills/interests needed
 - capacity (integer): max members
-- group_type: role, small_group, initiative
+- group_type: role, initiative, team, small_group, ministry, class
 
 **Field Mapping Rules:**
 - When users say "skills", "abilities", "talents", or "experience" → use "interests" field
@@ -27,12 +27,12 @@ Your job is to extract:
 
 1. SOURCE - Which entities to assign?
    - entity_type: "people" or "groups"
-   - subtype: What person_type? (volunteer, mentor, mentee, visitor, donor)
+   - subtype: What person_type or group_type? (volunteer, mentor, mentee, visitor, donor, leader for people; role, initiative, team, small_group, ministry, class for groups)
    - filters: Array of filter conditions (optional)
 
 2. TARGET - What are we assigning them to?
    - entity_type: "people" or "groups"  
-   - subtype: What group_type or person_type? (role, small_group, initiative, mentor, etc.)
+   - subtype: What group_type or person_type? (role, initiative, team, small_group, ministry, class for groups; volunteer, mentor, mentee, visitor, donor, leader for people)
    - filters: Array of filter conditions (optional)
 
 3. MATCH_STRATEGY - How to match?
