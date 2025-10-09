@@ -9,6 +9,9 @@ PEOPLE TABLE FIELDS:
 - availability_days (array): e.g., ['Sun', 'Mon', 'Wed']
 - capacity (integer): for mentors/leaders
 - person_type: volunteer, mentor, mentee, visitor, donor, leader
+IMPORTANT: person_type has ONLY these values: volunteer, mentor, mentee, visitor, donor, leader
+- Functional roles (greeter, usher, teacher, worship leader, etc.) are NOT person_types
+- These should be filtered via the "interests" field instead
 - zip (in metadata): location
 
 GROUPS TABLE FIELDS:
@@ -20,6 +23,9 @@ GROUPS TABLE FIELDS:
 - When users say "skills", "abilities", "talents", or "experience" → use "interests" field
 - When users say "availability" or "when they're free" → use "availability_days" field
 - When users say "roles" or "positions" → use group_type = 'role'
+
+- When users say "greeters", "ushers", "teachers" → filter by interests field ("greeting", "hospitality", "teaching")
+- NEVER use functional roles as person_type values
 
 ---
 
@@ -40,9 +46,30 @@ Your job is to extract:
    - interest_overlap: Match based on interests/requirements similarity
    - proximity: Match based on location (zip codes)
 
+   **CRITICAL: When to use each strategy:**
+   
+   A. Use capacity_balanced with EMPTY match_fields when:
+      - Source entities are NEW (visitors, new members) with unknown preferences
+      - Goal is EQUAL DISTRIBUTION (follow-ups, assignments, outreach)
+      - Target availability/capacity is the PRIMARY concern
+      - Example: "Match 50 visitors to 5 greeters" → capacity_balanced, score_on: []
+   
+   B. Use interest_overlap with scored match_fields when:
+      - Source entities have ESTABLISHED interests/skills
+      - Goal is QUALITY MATCHING (mentors, specialized roles, teams)
+      - Compatibility matters more than equal distribution
+      - Example: "Match volunteers to roles based on skills" → interest_overlap, score_on: ["interests"]
+   
+   C. Use proximity when:
+      - Geographic distance is the primary factor
+      - Example: "Match families to nearby small groups" → proximity, score_on: ["zip"]
+
 4. MATCH_FIELDS - What fields to score on? **USE ACTUAL FIELD NAMES ONLY**
    - score_on: Array of field names (interests, availability_days, zip)
+     * **IMPORTANT: Use EMPTY ARRAY [] for pure capacity balancing**
+     * Only add fields when compatibility scoring is needed
    - weights: Array of objects with field and weight (must sum to 1.0)
+     * **IMPORTANT: Use EMPTY ARRAY [] when score_on is empty**
 
 5. CONSTRAINTS
    - max_per_target: Which field defines capacity? (usually "capacity")
@@ -152,6 +179,22 @@ Output:
   ]
 }
 
+Request: "Match visitors to greeters for follow-up"
+Output:
+{
+  "template": "matching",
+  "source": {"entity_type": "people", "subtype": "visitor", "filters": []},
+  "target": {
+    "entity_type": "people",
+    "subtype": "volunteer",
+    "filters": [{"field": "interests", "operator": "contains", "value": "greeting"}]
+  },
+  "match_strategy": "capacity_balanced",
+  "match_fields": {"score_on": [], "weights": []},
+  "constraints": {"max_per_target": "capacity", "respect_preferences": false, "min_score_threshold": null},
+  "notifications": [...]
+}
+
 Request: "Match volunteers with skills in music to worship team roles"
 Output:
 {
@@ -195,6 +238,50 @@ Output:
       "recipient_type": "source",
       "channel": "sms",
       "template": "You're assigned to {{target_name}}!"
+    }
+  ]
+}
+
+Request: "Match 50 visitors to greeters for follow-up"
+Output:
+{
+  "template": "matching",
+  "source": {
+    "entity_type": "people",
+    "subtype": "visitor",
+    "filters": []
+  },
+  "target": {
+    "entity_type": "people",
+    "subtype": "volunteer",
+    "filters": [
+      {
+        "field": "interests",
+        "operator": "contains",
+        "value": "greeting"
+      }
+    ]
+  },
+  "match_strategy": "capacity_balanced",
+  "match_fields": {
+    "score_on": [],
+    "weights": []
+  },
+  "constraints": {
+    "max_per_target": "capacity",
+    "respect_preferences": false,
+    "min_score_threshold": null
+  },
+  "notifications": [
+    {
+      "recipient_type": "source",
+      "channel": "email",
+      "template": "You've been matched with {{target_name}} for follow-up."
+    },
+    {
+      "recipient_type": "target",
+      "channel": "email",
+      "template": "Please follow up with {{source_name}}. Contact: {{source_email}}"
     }
   ]
 }

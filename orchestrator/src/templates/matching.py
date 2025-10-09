@@ -33,6 +33,9 @@ class MatchFields(BaseModel):
     @field_validator('weights')
     @classmethod
     def validate_weights_sum(cls, v: List[FieldWeight]) -> List[FieldWeight]:
+        if len(v) == 0:
+            return v
+        
         total = sum(fw.weight for fw in v)
         if not (0.99 <= total <= 1.01):  # Allow small floating point errors
             raise ValueError(f"Weights must sum to 1.0, got {total}")

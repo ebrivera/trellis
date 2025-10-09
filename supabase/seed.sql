@@ -139,48 +139,48 @@ INSERT INTO groups (external_id, name, group_type, requirements, capacity, curre
 -- ============================================
 
 -- Insert 30 visitors spanning 60 days
-INSERT INTO people (external_id, name, email, phone, person_type, visit_date, last_contact_date, metadata) VALUES
+INSERT INTO people (external_id, name, email, phone, person_type, interests, visit_date, last_contact_date, metadata) VALUES
 -- Recent visitors (< 14 days) - should NOT be flagged
-('VIS001', 'Alice Thompson', 'alice.t@email.com', '555-0201', 'visitor', NOW() - INTERVAL '5 days', NOW() - INTERVAL '3 days', '{"first_visit": true}'),
-('VIS002', 'Bob Martinez', 'bob.m@email.com', '555-0202', 'visitor', NOW() - INTERVAL '8 days', NOW() - INTERVAL '6 days', '{"first_visit": true}'),
-('VIS003', 'Charlie Davis', 'charlie.d@email.com', '555-0203', 'visitor', NOW() - INTERVAL '10 days', NULL, '{"first_visit": true}'),
-('VIS004', 'Diana Wilson', 'diana.w@email.com', '555-0204', 'visitor', NOW() - INTERVAL '12 days', NOW() - INTERVAL '11 days', '{"first_visit": true}'),
+('VIS001', 'Alice Thompson', 'alice.t@email.com', '555-0201', 'visitor', ARRAY['community', 'fellowship'], NOW() - INTERVAL '5 days', NOW() - INTERVAL '3 days', '{"first_visit": true}'),
+('VIS002', 'Bob Martinez', 'bob.m@email.com', '555-0202', 'visitor', ARRAY['youth', 'sports'], NOW() - INTERVAL '8 days', NOW() - INTERVAL '6 days', '{"first_visit": true}'),
+('VIS003', 'Charlie Davis', 'charlie.d@email.com', '555-0203', 'visitor', ARRAY['music', 'worship'], NOW() - INTERVAL '10 days', NULL, '{"first_visit": true}'),
+('VIS004', 'Diana Wilson', 'diana.w@email.com', '555-0204', 'visitor', ARRAY['children', 'teaching'], NOW() - INTERVAL '12 days', NOW() - INTERVAL '11 days', '{"first_visit": true}'),
 
 -- Visitors 14-30 days ago, NOT contacted - SHOULD be flagged
-('VIS005', 'Ethan Brown', 'ethan.b@email.com', '555-0205', 'visitor', NOW() - INTERVAL '15 days', NULL, '{"first_visit": true, "interests": "youth ministry"}'),
-('VIS006', 'Fiona Garcia', 'fiona.g@email.com', '555-0206', 'visitor', NOW() - INTERVAL '18 days', NULL, '{"first_visit": true}'),
-('VIS007', 'George Taylor', 'george.t@email.com', '555-0207', 'visitor', NOW() - INTERVAL '21 days', NULL, '{"first_visit": true, "family_size": 4}'),
-('VIS008', 'Hannah Lee', 'hannah.l@email.com', '555-0208', 'visitor', NOW() - INTERVAL '24 days', NULL, '{"first_visit": true}'),
-('VIS009', 'Ian White', 'ian.w@email.com', '555-0209', 'visitor', NOW() - INTERVAL '27 days', NULL, '{"first_visit": true}'),
+('VIS005', 'Ethan Brown', 'ethan.b@email.com', '555-0205', 'visitor', ARRAY['youth'], NOW() - INTERVAL '15 days', NULL, '{"first_visit": true, "interests": "youth ministry"}'),
+('VIS006', 'Fiona Garcia', 'fiona.g@email.com', '555-0206', 'visitor', ARRAY['community'], NOW() - INTERVAL '18 days', NULL, '{"first_visit": true}'),
+('VIS007', 'George Taylor', 'george.t@email.com', '555-0207', 'visitor', ARRAY['family', 'children'], NOW() - INTERVAL '21 days', NULL, '{"first_visit": true, "family_size": 4}'),
+('VIS008', 'Hannah Lee', 'hannah.l@email.com', '555-0208', 'visitor', ARRAY['prayer', 'spiritual_growth'], NOW() - INTERVAL '24 days', NULL, '{"first_visit": true}'),
+('VIS009', 'Ian White', 'ian.w@email.com', '555-0209', 'visitor', ARRAY['outreach', 'service'], NOW() - INTERVAL '27 days', NULL, '{"first_visit": true}'),
 
 -- Visitors 14-30 days ago, already contacted - should NOT be flagged
-('VIS010', 'Julia Harris', 'julia.h@email.com', '555-0210', 'visitor', NOW() - INTERVAL '16 days', NOW() - INTERVAL '14 days', '{"first_visit": true}'),
-('VIS011', 'Kevin Clark', 'kevin.c@email.com', '555-0211', 'visitor', NOW() - INTERVAL '20 days', NOW() - INTERVAL '18 days', '{"first_visit": true}'),
-('VIS012', 'Laura Lewis', 'laura.l@email.com', '555-0212', 'visitor', NOW() - INTERVAL '25 days', NOW() - INTERVAL '23 days', '{"first_visit": true}'),
+('VIS010', 'Julia Harris', 'julia.h@email.com', '555-0210', 'visitor', ARRAY['music', 'arts'], NOW() - INTERVAL '16 days', NOW() - INTERVAL '14 days', '{"first_visit": true}'),
+('VIS011', 'Kevin Clark', 'kevin.c@email.com', '555-0211', 'visitor', ARRAY['technology', 'media'], NOW() - INTERVAL '20 days', NOW() - INTERVAL '18 days', '{"first_visit": true}'),
+('VIS012', 'Laura Lewis', 'laura.l@email.com', '555-0212', 'visitor', ARRAY['hospitality', 'cooking'], NOW() - INTERVAL '25 days', NOW() - INTERVAL '23 days', '{"first_visit": true}'),
 
 -- Visitors 30+ days ago, NOT contacted - SHOULD be flagged (high priority)
-('VIS013', 'Michael Walker', 'michael.w@email.com', '555-0213', 'visitor', NOW() - INTERVAL '35 days', NULL, '{"first_visit": true, "referred_by": "friend"}'),
-('VIS014', 'Nina Hall', 'nina.h@email.com', '555-0214', 'visitor', NOW() - INTERVAL '40 days', NULL, '{"first_visit": true}'),
-('VIS015', 'Oliver Young', 'oliver.y@email.com', '555-0215', 'visitor', NOW() - INTERVAL '45 days', NULL, '{"first_visit": true, "interests": "small groups"}'),
-('VIS016', 'Paula King', 'paula.k@email.com', '555-0216', 'visitor', NOW() - INTERVAL '50 days', NULL, '{"first_visit": true}'),
+('VIS013', 'Michael Walker', 'michael.w@email.com', '555-0213', 'visitor', ARRAY['small_groups'], NOW() - INTERVAL '35 days', NULL, '{"first_visit": true, "referred_by": "friend"}'),
+('VIS014', 'Nina Hall', 'nina.h@email.com', '555-0214', 'visitor', ARRAY['womens_ministry'], NOW() - INTERVAL '40 days', NULL, '{"first_visit": true}'),
+('VIS015', 'Oliver Young', 'oliver.y@email.com', '555-0215', 'visitor', ARRAY['small_groups', 'discipleship'], NOW() - INTERVAL '45 days', NULL, '{"first_visit": true, "interests": "small groups"}'),
+('VIS016', 'Paula King', 'paula.k@email.com', '555-0216', 'visitor', ARRAY['prayer', 'worship'], NOW() - INTERVAL '50 days', NULL, '{"first_visit": true}'),
 
 -- Visitors 30+ days ago, contacted - should NOT be flagged
-('VIS017', 'Quinn Wright', 'quinn.w@email.com', '555-0217', 'visitor', NOW() - INTERVAL '32 days', NOW() - INTERVAL '30 days', '{"first_visit": true}'),
-('VIS018', 'Rachel Scott', 'rachel.s@email.com', '555-0218', 'visitor', NOW() - INTERVAL '38 days', NOW() - INTERVAL '35 days', '{"first_visit": true}'),
-('VIS019', 'Sam Green', 'sam.g@email.com', '555-0219', 'visitor', NOW() - INTERVAL '42 days', NOW() - INTERVAL '40 days', '{"first_visit": true}'),
-('VIS020', 'Tina Adams', 'tina.a@email.com', '555-0220', 'visitor', NOW() - INTERVAL '48 days', NOW() - INTERVAL '46 days', '{"first_visit": true}'),
+('VIS017', 'Quinn Wright', 'quinn.w@email.com', '555-0217', 'visitor', ARRAY['creative_arts'], NOW() - INTERVAL '32 days', NOW() - INTERVAL '30 days', '{"first_visit": true}'),
+('VIS018', 'Rachel Scott', 'rachel.s@email.com', '555-0218', 'visitor', ARRAY['teaching', 'education'], NOW() - INTERVAL '38 days', NOW() - INTERVAL '35 days', '{"first_visit": true}'),
+('VIS019', 'Sam Green', 'sam.g@email.com', '555-0219', 'visitor', ARRAY['sports', 'recreation'], NOW() - INTERVAL '42 days', NOW() - INTERVAL '40 days', '{"first_visit": true}'),
+('VIS020', 'Tina Adams', 'tina.a@email.com', '555-0220', 'visitor', ARRAY['missions', 'global_outreach'], NOW() - INTERVAL '48 days', NOW() - INTERVAL '46 days', '{"first_visit": true}'),
 
 -- Mix of older visitors
-('VIS021', 'Uma Baker', 'uma.b@email.com', '555-0221', 'visitor', NOW() - INTERVAL '55 days', NULL, '{"first_visit": true}'),
-('VIS022', 'Victor Nelson', 'victor.n@email.com', '555-0222', 'visitor', NOW() - INTERVAL '58 days', NOW() - INTERVAL '56 days', '{"first_visit": true}'),
-('VIS023', 'Wendy Carter', 'wendy.c@email.com', '555-0223', 'visitor', NOW() - INTERVAL '19 days', NULL, '{"first_visit": true}'),
-('VIS024', 'Xavier Mitchell', 'xavier.m@email.com', '555-0224', 'visitor', NOW() - INTERVAL '22 days', NULL, '{"first_visit": true}'),
-('VIS025', 'Yara Perez', 'yara.p@email.com', '555-0225', 'visitor', NOW() - INTERVAL '28 days', NULL, '{"first_visit": true}'),
-('VIS026', 'Zack Roberts', 'zack.r@email.com', '555-0226', 'visitor', NOW() - INTERVAL '31 days', NOW() - INTERVAL '29 days', '{"first_visit": true}'),
-('VIS027', 'Amy Turner', 'amy.t@email.com', '555-0227', 'visitor', NOW() - INTERVAL '36 days', NULL, '{"first_visit": true}'),
-('VIS028', 'Ben Phillips', 'ben.p@email.com', '555-0228', 'visitor', NOW() - INTERVAL '44 days', NULL, '{"first_visit": true}'),
-('VIS029', 'Cara Campbell', 'cara.c@email.com', '555-0229', 'visitor', NOW() - INTERVAL '52 days', NOW() - INTERVAL '50 days', '{"first_visit": true}'),
-('VIS030', 'Dan Parker', 'dan.p@email.com', '555-0230', 'visitor', NOW() - INTERVAL '60 days', NULL, '{"first_visit": true}');
+('VIS021', 'Uma Baker', 'uma.b@email.com', '555-0221', 'visitor', ARRAY['community'], NOW() - INTERVAL '55 days', NULL, '{"first_visit": true}'),
+('VIS022', 'Victor Nelson', 'victor.n@email.com', '555-0222', 'visitor', ARRAY['leadership'], NOW() - INTERVAL '58 days', NOW() - INTERVAL '56 days', '{"first_visit": true}'),
+('VIS023', 'Wendy Carter', 'wendy.c@email.com', '555-0223', 'visitor', ARRAY['youth', 'mentoring'], NOW() - INTERVAL '19 days', NULL, '{"first_visit": true}'),
+('VIS024', 'Xavier Mitchell', 'xavier.m@email.com', '555-0224', 'visitor', ARRAY['counseling', 'care'], NOW() - INTERVAL '22 days', NULL, '{"first_visit": true}'),
+('VIS025', 'Yara Perez', 'yara.p@email.com', '555-0225', 'visitor', ARRAY['spanish_ministry'], NOW() - INTERVAL '28 days', NULL, '{"first_visit": true}'),
+('VIS026', 'Zack Roberts', 'zack.r@email.com', '555-0226', 'visitor', ARRAY['finance', 'administration'], NOW() - INTERVAL '31 days', NOW() - INTERVAL '29 days', '{"first_visit": true}'),
+('VIS027', 'Amy Turner', 'amy.t@email.com', '555-0227', 'visitor', ARRAY['childrens_ministry'], NOW() - INTERVAL '36 days', NULL, '{"first_visit": true}'),
+('VIS028', 'Ben Phillips', 'ben.p@email.com', '555-0228', 'visitor', ARRAY['music', 'technical'], NOW() - INTERVAL '44 days', NULL, '{"first_visit": true}'),
+('VIS029', 'Cara Campbell', 'cara.c@email.com', '555-0229', 'visitor', ARRAY['hospitality', 'events'], NOW() - INTERVAL '52 days', NOW() - INTERVAL '50 days', '{"first_visit": true}'),
+('VIS030', 'Dan Parker', 'dan.p@email.com', '555-0230', 'visitor', ARRAY['outreach', 'evangelism'], NOW() - INTERVAL '60 days', NULL, '{"first_visit": true}');
 
 -- ============================================
 -- USE CASE 3: GIVING ANALYSIS

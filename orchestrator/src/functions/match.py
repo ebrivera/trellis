@@ -114,7 +114,8 @@ def calculate_match_score(
 
         # Bonus for targets with more remaining capacity (encourages load balancing)
         capacity = target.get('capacity', 0)
-        if capacity > 0:
+        # Handle None/NaN capacity values
+        if capacity is not None and pd.notna(capacity) and capacity > 0:
             # Add bonus scaled to capacity: ln(capacity+1) / 20
             # This gives: cap=1 → 0.035, cap=10 → 0.12, cap=50 → 0.20, cap=100 → 0.23
             import math
@@ -141,6 +142,10 @@ def _calculate_weighted_score(
     Returns:
         Weighted score between 0.0 and 1.0
     """
+    # If no fields to score, return neutral score (pure capacity balancing)
+    if len(match_fields.score_on) == 0:
+        return 0.5  # Neutral score when not scoring any fields
+    
     total_score = 0.0
 
     # Build weight map for quick lookup
@@ -303,7 +308,15 @@ def _initialize_capacity_tracking(
         if constraints.max_per_target:
             capacity_field = constraints.max_per_target
             if capacity_field in target:
-                capacity_map[target_id] = int(target[capacity_field])
+                capacity_value = target[capacity_field]
+                # Handle None, NaN, or empty values
+                if pd.notna(capacity_value) and capacity_value not in (None, ''):
+                    try:
+                        capacity_map[target_id] = int(capacity_value)
+                    except (ValueError, TypeError):
+                        capacity_map[target_id] = 999  # Unlimited if can't convert
+                else:
+                    capacity_map[target_id] = 999  # Unlimited if null
             else:
                 capacity_map[target_id] = 999  # Unlimited if field missing
         else:
