@@ -125,15 +125,48 @@ async def run_orchestration_with_events(
             
             elif node_name == "tally_votes":
                 debate_state = state['debate_state']
+                veto_type = debate_state.get('veto_type')
+                veto_override = debate_state.get('veto_override', False)
+
+                # Always emit voting_complete first
                 await event_queue.put({
                     'event': 'voting_complete',
                     'data': {
                         'winner': debate_state.get('winning_agent'),
                         'voteTally': debate_state.get('vote_tally', {}),
                         'winningStrategy': debate_state.get('winning_strategy', ''),
-                        'tieBrokenByModerator': debate_state.get('tie_broken_by_moderator', False)
+                        'tieBrokenByModerator': debate_state.get('tie_broken_by_moderator', False),
+                        'vetoOverride': veto_override,
+                        'vetoType': veto_type
                     }
                 })
+
+                # If ANY veto detected, emit appropriate event (graph will halt after this)
+                if veto_override:
+                    clarifications = state.get('clarifications', [])
+
+                    if veto_type == 'total_rejection':
+                        # Entire request is unethical
+                        await event_queue.put({
+                            'event': 'ethical_veto_total_rejection',
+                            'data': {
+                                'agent': debate_state.get('winning_agent'),
+                                'concerns': clarifications[0] if clarifications else debate_state.get('winning_strategy', ''),
+                                'message': 'This request violates ethical principles and cannot be executed. Please rephrase your request.'
+                            }
+                        })
+
+                    elif veto_type == 'partial_rejection':
+                        # Specific filters are unethical, core request is okay
+                        await event_queue.put({
+                            'event': 'ethical_veto_partial_rejection',
+                            'data': {
+                                'agent': debate_state.get('winning_agent'),
+                                'concerns': clarifications[0] if clarifications else debate_state.get('winning_strategy', ''),
+                                'alternativeApproach': debate_state.get('winning_strategy', ''),
+                                'message': 'This request contains problematic filters. An alternative approach has been suggested.'
+                            }
+                        })
             
             elif node_name == "create_approval_gate":
                 await event_queue.put({

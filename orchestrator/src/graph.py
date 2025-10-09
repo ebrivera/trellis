@@ -160,6 +160,68 @@ def should_continue_after_classifier(state: Dict[str, Any]) -> str:
     return "continue_to_debate"
 
 
+def should_continue_after_veto(state: Dict[str, Any]) -> str:
+    """
+    Determine if we should continue to extraction or halt for ethical concerns.
+
+    NEW BEHAVIOR: Both total and partial rejections now halt execution and return
+    clarification to the user, but with different messaging:
+
+    - TOTAL REJECTION: Entire request is unethical → explain concerns, ask to rephrase
+    - PARTIAL REJECTION: Specific filters are unethical → explain concerns, present
+      sanitized alternative, ask if it achieves their goal
+
+    Returns:
+        "ethical_veto" if any veto detected (halt execution)
+        "continue_to_extraction" if no veto
+    """
+    debate_state = state.get('debate_state', {})
+    veto_override = debate_state.get('veto_override', False)
+
+    if not veto_override:
+        # No veto detected, continue normally
+        return "continue_to_extraction"
+
+    # Veto detected - halt and generate appropriate clarification message
+    winning_agent = debate_state.get('winning_agent', 'HumanFlourishing')
+    winning_strategy = debate_state.get('winning_strategy', '')
+    veto_type = debate_state.get('veto_type')
+
+    if veto_type == 'total_rejection':
+        # Entire request is unethical
+        state['clarifications'] = [
+            f"⚠️ **Ethical Concerns Raised by {winning_agent}**\n\n"
+            f"{winning_strategy}\n\n"
+            "**This request cannot be executed as stated.** Please rephrase your request to align with these principles, or provide more context."
+        ]
+
+        print("\n" + "="*80)
+        print("🚫 TOTAL REJECTION - HALTING WORKFLOW")
+        print("="*80)
+        print(f"Reason: Entire request violates ethical principles")
+        print(f"Action: Returning concerns to user for rephrasing")
+        print("="*80 + "\n")
+
+    elif veto_type == 'partial_rejection':
+        # Specific filters are unethical, but core request is okay
+        state['clarifications'] = [
+            f"⚠️ **Ethical Concerns Raised by {winning_agent}**\n\n"
+            f"{winning_strategy}\n\n"
+            f"**Alternative Approach:** {winning_agent} suggests removing the problematic filters while preserving the core intent of your request.\n\n"
+            "**Does this alternative approach achieve your goal?** If so, please rephrase your request without the flagged filters. "
+            "If not, please provide more context about what you're trying to accomplish."
+        ]
+
+        print("\n" + "="*80)
+        print("✏️  PARTIAL REJECTION - HALTING FOR USER CONFIRMATION")
+        print("="*80)
+        print(f"Reason: Specific filters violate ethical principles")
+        print(f"Action: Presenting sanitized alternative to user")
+        print("="*80 + "\n")
+
+    return "ethical_veto"
+
+
 # ============================================================================
 # BUILD MAIN ORCHESTRATOR GRAPH
 # ============================================================================
@@ -169,11 +231,13 @@ def create_orchestrator_graph():
     Create the main orchestration graph.
 
     Flow:
-    START → classifier → [CONDITIONAL]
+    START → classifier → [CONDITIONAL 1]
                          ├─ needs_clarification → END (return question to user)
                          └─ continue_to_debate → initialize_debate → round_1 → advance_2 → round_2
-                                                → advance_3 → round_3 → tally_votes → extract_params
-                                                → create_approval_gate → END
+                                                → advance_3 → round_3 → tally_votes → [CONDITIONAL 2]
+                                                                                      ├─ total_rejection → END (ethical veto)
+                                                                                      └─ continue_to_extraction → extract_params
+                                                                                                                → create_approval_gate → END
     """
 
     graph = StateGraph(dict)
@@ -208,9 +272,19 @@ def create_orchestrator_graph():
     graph.add_edge("round_2_rebuttals", "advance_to_round_3")
     graph.add_edge("advance_to_round_3", "round_3_voting")
     graph.add_edge("round_3_voting", "tally_votes")
-    graph.add_edge("tally_votes", "extract_params")
-    graph.add_edge("extract_params", "create_approval_gate")  # NEW
-    graph.add_edge("create_approval_gate", END)  # NEW
+
+    # CONDITIONAL: Check if ethical veto requires halting execution
+    graph.add_conditional_edges(
+        "tally_votes",
+        should_continue_after_veto,
+        {
+            "ethical_veto": END,  # Stop and return ethical concerns/alternative to user
+            "continue_to_extraction": "extract_params"  # Continue to parameter extraction
+        }
+    )
+
+    graph.add_edge("extract_params", "create_approval_gate")
+    graph.add_edge("create_approval_gate", END)
     
     return graph.compile()
 

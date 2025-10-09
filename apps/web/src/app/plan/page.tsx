@@ -258,7 +258,47 @@ export default function GoalsPage() {
                 
                 console.log('🏆 Winner:', data.winner)
             })
-    
+
+            eventSource.addEventListener('ethical_veto_total_rejection', (e) => {
+                const data = JSON.parse(e.data)
+                console.log('🚨 Ethical veto - total rejection:', data.agent)
+
+                // Close SSE connection - no execution will happen
+                eventSource.close()
+
+                // Remove "analyzing" message if it still exists
+                setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
+
+                // Add ethical concerns message
+                const ethicalMessage: Message = {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `⚠️ **Ethical Concerns Raised**\n\n${data.agent} identified serious ethical issues with your request:\n\n${data.concerns}\n\nPlease rephrase your request to align with these principles, or provide more context.`
+                }
+                setMessages(prev => [...prev, ethicalMessage])
+                setIsProcessing(false)
+            })
+
+            eventSource.addEventListener('ethical_veto_partial_rejection', (e) => {
+                const data = JSON.parse(e.data)
+                console.log('✏️ Ethical veto - partial rejection:', data.agent)
+
+                // Close SSE connection - no execution will happen
+                eventSource.close()
+
+                // Remove "analyzing" message if it still exists
+                setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
+
+                // Add alternative approach message
+                const alternativeMessage: Message = {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: data.concerns
+                }
+                setMessages(prev => [...prev, alternativeMessage])
+                setIsProcessing(false)
+            })
+
             eventSource.addEventListener('preview_ready', async (e) => {
                 const data = JSON.parse(e.data)
                 

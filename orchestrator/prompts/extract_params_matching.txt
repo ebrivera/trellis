@@ -12,7 +12,11 @@ PEOPLE TABLE FIELDS:
 IMPORTANT: person_type has ONLY these values: volunteer, mentor, mentee, visitor, donor, leader
 - Functional roles (greeter, usher, teacher, worship leader, etc.) are NOT person_types
 - These should be filtered via the "interests" field instead
-- zip (in metadata): location
+
+**IMPORTANT: The "zip" field is NOT directly available for matching.**
+- Location data is stored in metadata JSON, not as a top-level field
+- DO NOT use "zip" in match_fields.score_on
+- If user requests location-based matching, use proximity strategy but leave score_on empty or use only interests
 
 GROUPS TABLE FIELDS:
 - requirements (array): skills/interests needed
