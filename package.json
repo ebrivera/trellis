@@ -24,5 +24,8 @@
   "packageManager": "npm@9.8.1+sha512.01f0ef4e1433b085e162093dce16e4e51fa587cd7594a90b01e40c3214b2a5fd4133bcd469f788201ccccdeb297ae544274f8bbd8dfaa114187fb20a2f3537af",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "ogl": "^1.0.11"
   }
 }

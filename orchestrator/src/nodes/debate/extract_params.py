@@ -24,6 +24,15 @@ def load_extraction_prompt(template_type) -> str:
     
     return prompt_path.read_text()
 
+def format_debate_history(debate_state: Dict[str, Any]) -> str:
+    """Format complete debate for ethical review"""
+    history = []
+    for entry in debate_state.get('debate_history', []):
+        agent = entry['agent']
+        msg_type = entry['message_type']
+        content = entry['content'][:200]  # Truncate long messages
+        history.append(f"{agent} ({msg_type}): {content}")
+    return "\n".join(history)
 
 def extract_params_from_winner(state: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -68,6 +77,18 @@ def extract_params_from_winner(state: Dict[str, Any]) -> Dict[str, Any]:
     WINNING STRATEGY:
     {winning_strategy}
 
+    ETHICAL BOUNDARY CHECK:
+    Review the debate history below. If HumanFlourishing invoked "ABSOLUTE VETO" regarding discriminatory filters (tithing, giving, attendance, membership), you MUST exclude those filters from the extracted parameters, even if the winning strategy mentioned them.
+    
+    Discriminatory filters to NEVER include:
+    - tithing_status, tithe_date, giving_history, donation_amount
+    - attendance_count, attendance_rate, membership_status, membership_duration
+    
+    If the winning strategy contains these filters, REMOVE them and match ALL people who meet the non-discriminatory criteria.
+    
+    FULL DEBATE HISTORY:
+    {format_debate_history(debate_state)}
+    
     EXTRACTION INSTRUCTIONS:
     {base_extraction_prompt}
 
@@ -76,7 +97,7 @@ def extract_params_from_winner(state: Dict[str, Any]) -> Dict[str, Any]:
     - Operations: feasibility, avoiding over-scheduling, practical execution  
     - HumanFlourishing: relationships, spiritual growth, community health
 
-    Extract parameters that align with {winning_agent}'s approach as described in their winning strategy.
+    Extract parameters that align with {winning_agent}'s approach as described in their winning strategy, BUT the ETHICAL BOUNDARY CHECK above takes absolute precedence - discriminatory filters MUST be removed regardless of which agent won.
     """
 
     # Call LLM with structured output
@@ -91,14 +112,14 @@ def extract_params_from_winner(state: Dict[str, Any]) -> Dict[str, Any]:
     )
     
     params = response.choices[0].message.parsed.model_dump()
-    
+
     # Update state
     debate_state['params'] = params
     state['params'] = params
-    
+
     print(f"✅ Parameters extracted successfully")
     print(f"   Template: {template.value}")
-    
+
     # Log EntityQuery details
     if 'source' in params:
         source = params['source']
@@ -107,13 +128,24 @@ def extract_params_from_winner(state: Dict[str, Any]) -> Dict[str, Any]:
             print(f"     Subtype: {source['subtype']}")
         if source.get('filters'):
             print(f"     Filters: {len(source['filters'])} conditions")
-    
+            for filt in source['filters']:
+                print(f"       - {filt}")
+
     if 'target' in params:
         target = params['target']
         print(f"   Target: {target.get('entity_type')}")
         if target.get('subtype'):
             print(f"     Subtype: {target['subtype']}")
-    
+        if target.get('filters'):
+            print(f"     Filters: {len(target['filters'])} conditions")
+            for filt in target['filters']:
+                print(f"       - {filt}")
+
+    # Print full params for debugging
+    import json
+    print(f"\n📋 FULL EXTRACTED PARAMS:")
+    print(json.dumps(params, indent=2, default=str))
+
     print("="*80 + "\n")
-    
+
     return state

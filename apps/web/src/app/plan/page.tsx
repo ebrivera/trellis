@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { Badge } from '../../components/ui/Badge'
 import { ChatMessage } from '../../components/ui/ChatMessage'
 import { DebateViewer } from '../../components/ui/DebateViewer'
-import { CheckCircle, Edit, X, Users, Clock, TrendingUp, AlertTriangle } from 'lucide-react'
+import { CheckCircle, Eye, X, Users, Clock, TrendingUp, AlertTriangle, Save } from 'lucide-react'
 import type { ApprovalGate, MatchingPreview, MonitoringPreview, AnalysisPreview, AgentName, DebateMessage } from '@trellis/types'
 // MOCK: Import mock data - backend will replace with API calls
 // import { mockMatchingApproval, mockMonitoringApproval, mockAnalysisApproval } from '../../lib/mockData'
@@ -57,6 +57,7 @@ export default function GoalsPage() {
     const [currentRound, setCurrentRound] = useState<1 | 2 | 3>(1)
     const [winner, setWinner] = useState<AgentName | undefined>()
     const [voteTally, setVoteTally] = useState<Record<AgentName, number> | undefined>()
+    const [showDetailsModal, setShowDetailsModal] = useState(false)
     // REMOVED: const [showDebate, setShowDebate] = useState(false)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -131,11 +132,33 @@ export default function GoalsPage() {
             eventSource.addEventListener('classifier_complete', (e) => {
                 const data = JSON.parse(e.data)
                 console.log('✅ Classified as:', data.template)
-                
+
                 // Remove analyzing message
                 setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
             })
-    
+
+            eventSource.addEventListener('clarification_needed', (e) => {
+                const data = JSON.parse(e.data)
+                console.log('❓ Clarification needed:', data.question)
+
+                // Close SSE connection - no debate will happen
+                eventSource.close()
+
+                // Remove analyzing and debate messages
+                setMessages(prev => prev.filter(m =>
+                    m.id !== analyzingMessage.id && m.id !== debateMessageId
+                ))
+
+                // Add clarification message
+                const clarificationMessage: Message = {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `I need some clarification before proceeding:\n\n**${data.question}**\n\nPlease provide more details so I can create the best plan for you.`
+                }
+                setMessages(prev => [...prev, clarificationMessage])
+                setIsProcessing(false)
+            })
+
             eventSource.addEventListener('debate_start', (e) => {
                 console.log('🎭 Debate starting...')
             })
@@ -236,7 +259,47 @@ export default function GoalsPage() {
                 
                 console.log('🏆 Winner:', data.winner)
             })
-    
+
+            eventSource.addEventListener('ethical_veto_total_rejection', (e) => {
+                const data = JSON.parse(e.data)
+                console.log('🚨 Ethical veto - total rejection:', data.agent)
+
+                // Close SSE connection - no execution will happen
+                eventSource.close()
+
+                // Remove "analyzing" message if it still exists
+                setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
+
+                // Add ethical concerns message
+                const ethicalMessage: Message = {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `⚠️ **Ethical Concerns Raised**\n\n${data.agent} identified serious ethical issues with your request:\n\n${data.concerns}\n\nPlease rephrase your request to align with these principles, or provide more context.`
+                }
+                setMessages(prev => [...prev, ethicalMessage])
+                setIsProcessing(false)
+            })
+
+            eventSource.addEventListener('ethical_veto_partial_rejection', (e) => {
+                const data = JSON.parse(e.data)
+                console.log('✏️ Ethical veto - partial rejection:', data.agent)
+
+                // Close SSE connection - no execution will happen
+                eventSource.close()
+
+                // Remove "analyzing" message if it still exists
+                setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
+
+                // Add alternative approach message
+                const alternativeMessage: Message = {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: data.concerns
+                }
+                setMessages(prev => [...prev, alternativeMessage])
+                setIsProcessing(false)
+            })
+
             eventSource.addEventListener('preview_ready', async (e) => {
                 const data = JSON.parse(e.data)
                 
@@ -329,38 +392,99 @@ export default function GoalsPage() {
         }
     }
 
-    const handleApprove = () => {
-        const approvalMessage: Message = {
-            id: Date.now().toString(),
-            role: 'system',
-            content: 'Plan approved! Redirecting to the Approvals page...',
+    const handleApprove = async () => {
+        if (!currentApproval) return
+
+        // Execute the workflow
+        try {
+            await fetch(`http://localhost:8000/approval/${currentApproval.id}/decide`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'approve' })
+            })
+
+            const approvalMessage: Message = {
+                id: Date.now().toString(),
+                role: 'system',
+                content: 'Plan approved and executing! Redirecting to the Approvals page...',
+            }
+            setMessages((prev) => [...prev, approvalMessage])
+            setCurrentApproval(null)
+
+            setTimeout(() => {
+                router.push('/approvals')
+            }, 1000)
+        } catch (error) {
+            console.error('Failed to approve workflow:', error)
+            const errorMessage: Message = {
+                id: Date.now().toString(),
+                role: 'system',
+                content: 'Failed to execute plan. Please try again.',
+            }
+            setMessages((prev) => [...prev, errorMessage])
         }
-        setMessages((prev) => [...prev, approvalMessage])
-        setCurrentApproval(null)
-        
-        setTimeout(() => {
-            router.push('/approvals')
-        }, 1000)
     }
 
-    const handleRevise = () => {
-        const reviseMessage: Message = {
-            id: Date.now().toString(),
-            role: 'system',
-            content: 'What would you like to change about the plan? Describe your adjustments.',
+    const handleSaveForLater = async () => {
+        if (!currentApproval) return
+
+        // Update status to 'saved' in backend
+        try {
+            await fetch(`http://localhost:8000/approval/${currentApproval.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'saved' })
+            })
+
+            const saveMessage: Message = {
+                id: Date.now().toString(),
+                role: 'system',
+                content: '✓ Plan saved! You can review it later in the Approvals page. Feel free to create another plan.',
+            }
+            setMessages((prev) => [...prev, saveMessage])
+            setCurrentApproval(null)
+        } catch (error) {
+            console.error('Failed to save approval:', error)
+            const errorMessage: Message = {
+                id: Date.now().toString(),
+                role: 'system',
+                content: 'Failed to save plan. Please try again.',
+            }
+            setMessages((prev) => [...prev, errorMessage])
         }
-        setMessages((prev) => [...prev, reviseMessage])
-        setCurrentApproval(null)
     }
 
-    const handleCancel = () => {
-        const cancelMessage: Message = {
-            id: Date.now().toString(),
-            role: 'system',
-            content: 'Plan cancelled. Feel free to start a new goal whenever you\'re ready.',
+    const handleViewDetails = () => {
+        setShowDetailsModal(true)
+    }
+
+    const handleCancel = async () => {
+        if (!currentApproval) return
+
+        // Reject the approval
+        try {
+            await fetch(`http://localhost:8000/approval/${currentApproval.id}/decide`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reject' })
+            })
+
+            const cancelMessage: Message = {
+                id: Date.now().toString(),
+                role: 'system',
+                content: 'Plan rejected. Feel free to start a new goal whenever you\'re ready.',
+            }
+            setMessages((prev) => [...prev, cancelMessage])
+            setCurrentApproval(null)
+        } catch (error) {
+            console.error('Failed to reject approval:', error)
+            const errorMessage: Message = {
+                id: Date.now().toString(),
+                role: 'system',
+                content: 'Failed to reject plan. Please try again.',
+            }
+            setMessages((prev) => [...prev, errorMessage])
         }
-        setMessages((prev) => [...prev, cancelMessage])
-        setCurrentApproval(null)
     }
 
     const handleTemplate = (template: string) => {
@@ -594,15 +718,19 @@ export default function GoalsPage() {
                                                 <div className="flex flex-wrap gap-3 pt-4">
                                                     <Button onClick={handleApprove} size="lg">
                                                         <CheckCircle className="inline-block w-5 h-5 mr-2" />
-                                                        Approve & Continue
+                                                        Approve & Execute
                                                     </Button>
-                                                    <Button onClick={handleRevise} variant="outline" size="lg">
-                                                        <Edit className="inline-block w-5 h-5 mr-2" />
-                                                        Revise Plan
+                                                    <Button onClick={handleSaveForLater} variant="outline" size="lg">
+                                                        <Save className="inline-block w-5 h-5 mr-2" />
+                                                        Save for Later
+                                                    </Button>
+                                                    <Button onClick={handleViewDetails} variant="outline" size="lg">
+                                                        <Eye className="inline-block w-5 h-5 mr-2" />
+                                                        View Details
                                                     </Button>
                                                     <Button onClick={handleCancel} variant="ghost" size="lg">
                                                         <X className="inline-block w-5 h-5 mr-2" />
-                                                        Cancel
+                                                        Reject
                                                     </Button>
                                                 </div>
                                             )}
@@ -647,6 +775,136 @@ export default function GoalsPage() {
                         </Button>
                     </div>
                 </Card>
+
+                {/* Details Modal */}
+                {showDetailsModal && currentApproval && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80" onClick={() => setShowDetailsModal(false)}>
+                        <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-gray-900 to-black border border-white/20 rounded-2xl" onClick={(e) => e.stopPropagation()}>
+                            {/* Modal Header */}
+                            <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b bg-gray-900/95 backdrop-blur-sm border-white/10">
+                                <div className="flex items-center gap-3">
+                                    <Badge variant={currentApproval.template === 'matching' ? 'info' : currentApproval.template === 'monitoring' ? 'default' : 'success'}>
+                                        {currentApproval.template.charAt(0).toUpperCase() + currentApproval.template.slice(1)}
+                                    </Badge>
+                                    <h2 className="text-2xl font-bold text-white">Plan Details</h2>
+                                </div>
+                                <button
+                                    onClick={() => setShowDetailsModal(false)}
+                                    className="p-2 text-white transition-colors rounded-lg hover:bg-white/10"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            {/* Modal Content */}
+                            <div className="p-6 space-y-6">
+                                {/* Metrics Overview */}
+                                <div>
+                                    <h3 className="mb-3 text-lg font-semibold text-white">Overview</h3>
+                                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                                        {Object.entries(currentApproval.metrics).map(([key, value]) => (
+                                            <div key={key} className="p-4 border rounded-lg bg-white/5 border-white/10">
+                                                <p className="mb-1 text-sm text-white/60">{key}</p>
+                                                <p className="text-2xl font-bold text-white">{value}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Matching Template Details */}
+                                {currentApproval.template === 'matching' && (
+                                    <div>
+                                        <h3 className="mb-3 text-lg font-semibold text-white">Proposed Assignments</h3>
+                                        <div className="overflow-hidden border rounded-lg border-white/10">
+                                            <table className="w-full">
+                                                <thead className="bg-white/5">
+                                                    <tr>
+                                                        <th className="px-4 py-3 text-sm font-medium text-left text-white/70">Source</th>
+                                                        <th className="px-4 py-3 text-sm font-medium text-left text-white/70">Target</th>
+                                                        <th className="px-4 py-3 text-sm font-medium text-left text-white/70">Match Score</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(currentApproval.preview as MatchingPreview).assignments_preview?.slice(0, 10).map((assignment, idx) => (
+                                                        <tr key={idx} className="border-t border-white/10">
+                                                            <td className="px-4 py-3 text-sm text-white">{assignment.source_name}</td>
+                                                            <td className="px-4 py-3 text-sm text-white">{assignment.target_name}</td>
+                                                            <td className="px-4 py-3 text-sm text-white">
+                                                                <span className="px-2 py-1 text-xs font-medium rounded bg-blue-400/20 text-blue-400">
+                                                                    {Math.round((assignment.match_score || 0) * 100)}%
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        {(currentApproval.preview as MatchingPreview).assignments_preview &&
+                                         (currentApproval.preview as MatchingPreview).assignments_preview.length > 10 && (
+                                            <p className="mt-2 text-sm text-white/50">
+                                                Showing 10 of {(currentApproval.preview as MatchingPreview).assignments_preview.length} assignments
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Monitoring Template Details */}
+                                {currentApproval.template === 'monitoring' && (
+                                    <div>
+                                        <h3 className="mb-3 text-lg font-semibold text-white">Flagged Entities</h3>
+                                        <div className="overflow-hidden border rounded-lg border-white/10">
+                                            <table className="w-full">
+                                                <thead className="bg-white/5">
+                                                    <tr>
+                                                        <th className="px-4 py-3 text-sm font-medium text-left text-white/70">Name</th>
+                                                        <th className="px-4 py-3 text-sm font-medium text-left text-white/70">Email</th>
+                                                        <th className="px-4 py-3 text-sm font-medium text-left text-white/70">Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {(currentApproval.preview as MonitoringPreview).flagged_preview?.slice(0, 10).map((entity, idx) => (
+                                                        <tr key={idx} className="border-t border-white/10">
+                                                            <td className="px-4 py-3 text-sm text-white">{entity.name}</td>
+                                                            <td className="px-4 py-3 text-sm text-white">{entity.email}</td>
+                                                            <td className="px-4 py-3 text-sm">
+                                                                <span className="px-2 py-1 text-xs font-medium rounded bg-yellow-400/20 text-yellow-400">
+                                                                    Flagged
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Analysis Template Details */}
+                                {currentApproval.template === 'analysis' && (
+                                    <div>
+                                        <h3 className="mb-3 text-lg font-semibold text-white">Analysis Results</h3>
+                                        <div className="p-4 border rounded-lg bg-white/5 border-white/10">
+                                            <pre className="text-sm text-white whitespace-pre-wrap">
+                                                {JSON.stringify((currentApproval.preview as AnalysisPreview).metrics, null, 2)}
+                                            </pre>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Actions in Modal */}
+                                <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                                    <Button onClick={() => setShowDetailsModal(false)} variant="outline" size="lg">
+                                        Close
+                                    </Button>
+                                    <Button onClick={() => { setShowDetailsModal(false); handleApprove(); }} size="lg">
+                                        <CheckCircle className="inline-block w-5 h-5 mr-2" />
+                                        Approve & Execute
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </main>
     )
