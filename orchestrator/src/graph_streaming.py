@@ -47,14 +47,31 @@ async def run_orchestration_with_events(
             
             # Emit events based on which node just completed
             if node_name == "classifier":
-                await event_queue.put({
-                    'event': 'classifier_complete',
-                    'data': {
-                        'template': state['template'].value,
-                        'confidence': state.get('confidence', 0.95),
-                        'reasoning': state.get('classifier_reasoning', 'Request classified')
-                    }
-                })
+                # Check if clarification is needed
+                clarifications = state.get('clarifications', [])
+                confidence = state.get('confidence', 1.0)
+
+                if clarifications and confidence < 0.8:
+                    # Emit clarification_needed event - graph will halt here
+                    await event_queue.put({
+                        'event': 'clarification_needed',
+                        'data': {
+                            'question': clarifications[0],
+                            'confidence': confidence,
+                            'reasoning': state.get('classifier_reasoning', ''),
+                            'suggestedTemplate': state['template'].value if 'template' in state else None
+                        }
+                    })
+                else:
+                    # Normal classification - proceed to debate
+                    await event_queue.put({
+                        'event': 'classifier_complete',
+                        'data': {
+                            'template': state['template'].value,
+                            'confidence': confidence,
+                            'reasoning': state.get('classifier_reasoning', 'Request classified')
+                        }
+                    })
             
             elif node_name == "initialize_debate":
                 await event_queue.put({

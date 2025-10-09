@@ -131,11 +131,33 @@ export default function GoalsPage() {
             eventSource.addEventListener('classifier_complete', (e) => {
                 const data = JSON.parse(e.data)
                 console.log('✅ Classified as:', data.template)
-                
+
                 // Remove analyzing message
                 setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
             })
-    
+
+            eventSource.addEventListener('clarification_needed', (e) => {
+                const data = JSON.parse(e.data)
+                console.log('❓ Clarification needed:', data.question)
+
+                // Close SSE connection - no debate will happen
+                eventSource.close()
+
+                // Remove analyzing and debate messages
+                setMessages(prev => prev.filter(m =>
+                    m.id !== analyzingMessage.id && m.id !== debateMessageId
+                ))
+
+                // Add clarification message
+                const clarificationMessage: Message = {
+                    id: Date.now().toString(),
+                    role: 'system',
+                    content: `I need some clarification before proceeding:\n\n**${data.question}**\n\nPlease provide more details so I can create the best plan for you.`
+                }
+                setMessages(prev => [...prev, clarificationMessage])
+                setIsProcessing(false)
+            })
+
             eventSource.addEventListener('debate_start', (e) => {
                 console.log('🎭 Debate starting...')
             })

@@ -134,21 +134,50 @@ async def create_approval_gate_node(state: Dict[str, Any]) -> Dict[str, Any]:
     return state
 
 # ============================================================================
+# CONDITIONAL ROUTING FUNCTIONS
+# ============================================================================
+
+def should_continue_after_classifier(state: Dict[str, Any]) -> str:
+    """
+    Determine if we should continue to debate or stop for clarification.
+
+    Returns:
+        "needs_clarification" if confidence < 0.8 and clarifying question exists
+        "continue_to_debate" if confidence >= 0.8 or no clarification needed
+    """
+    clarifications = state.get('clarifications', [])
+    confidence = state.get('confidence', 1.0)
+
+    if clarifications and confidence < 0.8:
+        print("\n" + "="*80)
+        print("⚠️  LOW CONFIDENCE - CLARIFICATION NEEDED")
+        print("="*80)
+        print(f"Confidence: {confidence:.2f} (threshold: 0.80)")
+        print(f"Question: {clarifications[0]}")
+        print("="*80 + "\n")
+        return "needs_clarification"
+
+    return "continue_to_debate"
+
+
+# ============================================================================
 # BUILD MAIN ORCHESTRATOR GRAPH
 # ============================================================================
 
 def create_orchestrator_graph():
     """
     Create the main orchestration graph.
-    
+
     Flow:
-    START → classifier → initialize_debate → round_1 → advance_2 → round_2 
-          → advance_3 → round_3 → tally_votes → extract_params 
-          → create_approval_gate → END
+    START → classifier → [CONDITIONAL]
+                         ├─ needs_clarification → END (return question to user)
+                         └─ continue_to_debate → initialize_debate → round_1 → advance_2 → round_2
+                                                → advance_3 → round_3 → tally_votes → extract_params
+                                                → create_approval_gate → END
     """
-    
+
     graph = StateGraph(dict)
-    
+
     # Add all nodes
     graph.add_node("classifier", classify_template)
     graph.add_node("initialize_debate", initialize_debate_state)
@@ -159,11 +188,20 @@ def create_orchestrator_graph():
     graph.add_node("round_3_voting", execute_round_3)
     graph.add_node("tally_votes", tally_votes_and_determine_winner)
     graph.add_node("extract_params", extract_params_from_winner)
-    graph.add_node("create_approval_gate", create_approval_gate_node)  # NEW
-    
-    # Define linear flow
+    graph.add_node("create_approval_gate", create_approval_gate_node)
+
+    # Define flow
     graph.add_edge(START, "classifier")
-    graph.add_edge("classifier", "initialize_debate")
+
+    # CONDITIONAL: Check if clarification is needed after classification
+    graph.add_conditional_edges(
+        "classifier",
+        should_continue_after_classifier,
+        {
+            "needs_clarification": END,  # Stop and return clarifications to user
+            "continue_to_debate": "initialize_debate"  # Continue to debate
+        }
+    )
     graph.add_edge("initialize_debate", "round_1_proposals")
     graph.add_edge("round_1_proposals", "advance_to_round_2")
     graph.add_edge("advance_to_round_2", "round_2_rebuttals")
