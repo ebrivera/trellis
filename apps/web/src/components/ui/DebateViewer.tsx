@@ -98,22 +98,35 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
                         <div 
                             key={agent}
                             className={`flex flex-col border rounded-lg p-4 transition-all ${config.bgColor} ${config.borderColor} ${
-                                isWinner ? 'ring-2 ring-yellow-400' : ''
+                                isWinner ? 'ring-4 ring-yellow-400/60 animate-winnerGlow animate-winnerPulse relative overflow-hidden' : ''
                             }`}
                             style={{ minHeight: '200px' }}
                         >
+                            {/* Winner shimmer overlay */}
+                            {isWinner && (
+                                <div className="absolute inset-0 animate-winnerShimmer pointer-events-none" />
+                            )}
                             {/* Agent Header */}
                             <div className="mb-4">
                                 <div className="flex items-center justify-between mb-2">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-2xl">{config.emoji}</span>
-                                        <h4 className={`font-bold ${config.color}`}>
+                                        <span className={`text-2xl ${isWinner ? 'drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]' : ''}`}>
+                                            {config.emoji}
+                                        </span>
+                                        <h4 className={`font-bold ${config.color} ${isWinner ? 'drop-shadow-[0_0_8px_rgba(255,215,0,0.6)]' : ''}`}>
                                             {agent}
                                         </h4>
                                     </div>
                                     {isWinner && (
-                                        <Badge variant="warning">
-                                            🏆 Winner
+                                        <Badge 
+                                            variant="warning"
+                                            className="animate-badgeBounce relative overflow-hidden"
+                                        >
+                                            <span className="relative z-10 flex items-center gap-1">
+                                                <span className="animate-spin">🏆</span>
+                                                Winner
+                                            </span>
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400/30 to-transparent animate-winnerShimmer" />
                                         </Badge>
                                     )}
                                 </div>
