@@ -40,27 +40,39 @@ def calculate_metrics(
         # => {'avg_gift': 150.0}
     """
     results = {}
+    formats_to_apply = {}  # Track which metrics need formatting (apply after all calculations)
 
     for formula in formulas:
         try:
             # Check if this is a calculated metric (references other metrics/columns with operators)
             if _is_calculated_metric(formula.formula):
-                # Wait until all dependencies are calculated
-                result = _calculate_expression(formula, source_data, results)
+                # Check if it's grouped or ungrouped
+                if formula.group_by:
+                    result = _calculate_grouped_expression(formula, source_data, results)
+                else:
+                    result = _calculate_expression(formula, source_data, results)
             else:
                 # Parse and execute aggregation
                 result = _calculate_aggregation(formula, source_data)
 
-            # Format result if format explicitly specified
-            # Only format for currency/percent/number, not for default
-            if formula.format in ['currency', 'percent', 'number']:
-                result = _format_result(result, formula.format)
-
+            # Store raw numeric result (don't format yet - derived metrics need raw values)
             results[formula.name] = result
+
+            # Track formatting to apply after all calculations complete
+            if formula.format in ['currency', 'percent', 'number']:
+                formats_to_apply[formula.name] = formula.format
 
         except Exception as e:
             # Store error but continue processing other formulas
             results[formula.name] = {'error': str(e)}
+
+    # Apply formatting after all calculations are complete
+    # This ensures derived metrics can reference raw numeric values
+    for metric_name, format_type in formats_to_apply.items():
+        if metric_name in results:
+            # Only format if no error
+            if not (isinstance(results[metric_name], dict) and 'error' in results[metric_name]):
+                results[metric_name] = _format_result(results[metric_name], format_type)
 
     return results
 
@@ -259,6 +271,86 @@ def _calculate_expression(
         return float(result)
     except Exception as e:
         raise ValueError(f"Error evaluating expression '{expression}': {e}")
+
+
+def _calculate_grouped_expression(
+    formula: MetricFormula,
+    df: pd.DataFrame,
+    calculated_metrics: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Calculate a derived metric that has group_by.
+
+    For each group value:
+    1. Get the values of referenced metrics for that group
+    2. Get column values for that group (from first row)
+    3. Evaluate the expression
+
+    Args:
+        formula: MetricFormula with group_by specified
+        df: Source DataFrame
+        calculated_metrics: Previously calculated metrics
+
+    Returns:
+        Dict mapping group values to calculated results
+    """
+    expression = formula.formula
+    group_by = formula.group_by
+
+    if not group_by or group_by not in df.columns:
+        raise ValueError(f"Group by column '{group_by}' not found in DataFrame")
+
+    # Get all unique group values
+    groups = df[group_by].unique()
+    results = {}
+
+    # Extract identifiers from expression to know what we need
+    identifiers = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', expression)
+
+    for group_value in groups:
+        # Build context for this specific group
+        context = {}
+
+        # Add values from calculated metrics
+        for identifier in identifiers:
+            if identifier in calculated_metrics:
+                metric_value = calculated_metrics[identifier]
+
+                # If the metric is grouped, get the value for this specific group
+                if isinstance(metric_value, dict):
+                    # Skip if this group doesn't have a value in the metric
+                    if str(group_value) in metric_value:
+                        context[identifier] = metric_value[str(group_value)]
+                    else:
+                        # Try without string conversion
+                        context[identifier] = metric_value.get(group_value, 0)
+                else:
+                    # Scalar metric - use as is
+                    context[identifier] = metric_value
+
+            # Add column values for this group (use first row of group)
+            elif identifier in df.columns:
+                group_df = df[df[group_by] == group_value]
+                if len(group_df) > 0:
+                    context[identifier] = group_df[identifier].iloc[0]
+
+        # Validate all identifiers are available
+        missing = [id for id in identifiers if id not in context]
+        if missing:
+            raise ValueError(
+                f"Unknown references {missing} in formula '{expression}' for group '{group_value}'. "
+                f"Available metrics: {list(calculated_metrics.keys())}, "
+                f"Available columns: {list(df.columns)}"
+            )
+
+        # Evaluate expression for this group
+        try:
+            result = eval(expression, {"__builtins__": {}}, context)
+            results[str(group_value)] = float(result)
+        except Exception as e:
+            raise ValueError(f"Error evaluating '{expression}' for group '{group_value}': {e}")
+
+    return results
 
 
 def _format_result(

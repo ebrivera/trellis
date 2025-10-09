@@ -169,7 +169,8 @@ export default function GoalsPage() {
                 const ethicalMessage: Message = {
                     id: Date.now().toString(),
                     role: 'system',
-                    content: `⚠️ **Ethical Concerns Raised**\n\n${data.agent} identified serious ethical issues with your request:\n\n${data.concerns}\n\nPlease rephrase your request to align with these principles, or provide more context.`
+                    content: data.concerns,
+                    streaming: true
                 }
                 setMessages(prev => [...prev, ethicalMessage])
                 setIsProcessing(false)
@@ -185,7 +186,8 @@ export default function GoalsPage() {
                 const alternativeMessage: Message = {
                     id: Date.now().toString(),
                     role: 'system',
-                    content: data.concerns
+                    content: data.concerns,
+                    streaming: true
                 }
                 setMessages(prev => [...prev, alternativeMessage])
                 setIsProcessing(false)
@@ -291,50 +293,6 @@ export default function GoalsPage() {
                 console.log('🏆 Winner:', data.winner)
             })
 
-            eventSource.addEventListener('ethical_veto_total_rejection', (e) => {
-                const data = JSON.parse(e.data)
-                console.log('🚨 Ethical veto - total rejection:', data.agent)
-
-                // Close SSE connection - no execution will happen
-                eventSource.close()
-
-                // Remove "analyzing" message if it still exists
-                setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
-
-                // Add ethical concerns message
-                // The backend already formatted this message nicely, just display it with streaming
-                const ethicalMessage: Message = {
-                    id: Date.now().toString(),
-                    role: 'system',
-                    content: data.concerns,
-                    streaming: true
-                }
-                setMessages(prev => [...prev, ethicalMessage])
-                setIsProcessing(false)
-            })
-
-            eventSource.addEventListener('ethical_veto_partial_rejection', (e) => {
-                const data = JSON.parse(e.data)
-                console.log('✏️ Ethical veto - partial rejection:', data.agent)
-
-                // Close SSE connection - no execution will happen
-                eventSource.close()
-
-                // Remove "analyzing" message if it still exists
-                setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
-
-                // Add alternative approach message
-                // The backend already formatted this message nicely, just display it with streaming
-                const alternativeMessage: Message = {
-                    id: Date.now().toString(),
-                    role: 'system',
-                    content: data.concerns,
-                    streaming: true
-                }
-                setMessages(prev => [...prev, alternativeMessage])
-                setIsProcessing(false)
-            })
-
             eventSource.addEventListener('preview_ready', async (e) => {
                 const data = JSON.parse(e.data)
                 
@@ -357,7 +315,12 @@ export default function GoalsPage() {
                     const metricsData = typeof approval.metrics === 'string'
                         ? JSON.parse(approval.metrics)
                         : approval.metrics
-                    
+
+                    // Parse extracted_params from approval (already joined with workflow_run)
+                    const extractedParams = typeof approval.extracted_params === 'string'
+                        ? JSON.parse(approval.extracted_params)
+                        : approval.extracted_params || {}
+
                     // Create clean display metrics based on template
                     let displayMetrics: Record<string, string | number> = {}
                     if (data.template === 'matching') {
@@ -380,20 +343,6 @@ export default function GoalsPage() {
                             'Metrics Calculated': Object.keys(previewData.metrics_calculated || {}).length,
                             'Dimensions': previewData.dimensions?.length || 0
                         }
-                    }
-                    
-                    // Fetch workflow_run to get extracted_params
-                    let extractedParams = {}
-                    try {
-                        const workflowResponse = await fetch(`http://localhost:8000/workflow_runs/${approval.workflow_run_id}`)
-                        if (workflowResponse.ok) {
-                            const workflow = await workflowResponse.json()
-                            extractedParams = typeof workflow.extracted_params === 'string'
-                                ? JSON.parse(workflow.extracted_params)
-                                : workflow.extracted_params
-                        }
-                    } catch (err) {
-                        console.warn('Could not fetch workflow params:', err)
                     }
                     
                     // Add approval message (debate message stays in history!)

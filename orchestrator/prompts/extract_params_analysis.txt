@@ -21,9 +21,19 @@ Your job is to extract:
 3. METRICS - What to calculate?
    Each metric has:
    - name: Metric identifier
-   - formula: SQL aggregate (SUM, AVG, COUNT, etc.)
+   - formula: SQL aggregate (SUM, AVG, COUNT, etc.) OR reference to other metrics
    - group_by: Dimension to group by (optional)
    - format: "currency", "percent", or "number"
+
+   **CRITICAL: Formula Rules**
+   - **Base metrics**: Use SQL aggregations (SUM, COUNT, AVG, MAX, MIN)
+     Example: "SUM(amount)", "COUNT(DISTINCT donor_id)", "AVG(amount)"
+
+   - **Derived metrics**: Reference OTHER metrics by name (NO aggregations!)
+     Example: "total_raised / goal * 100" (references total_raised metric)
+     WRONG: "SUM(amount) / goal * 100" (can't use SUM in derived metric!)
+
+   - **Order matters**: Define base metrics BEFORE derived metrics that reference them
 
 4. FLAGS - What outliers to detect?
    - name: Flag identifier (e.g., "lapsed_donors")
@@ -44,6 +54,14 @@ IMPORTANT RULES:
 - For giving analysis: gifts table has donor_id → people.id and initiative_id → groups.id
 - Flags detect outliers (lapsed donors, underperforming initiatives, inactive people)
 - Format currency as "currency", percentages as "percent"
+
+**CRITICAL - Metric Formula Rules:**
+- **NEVER use aggregation functions (SUM, COUNT, etc.) in derived metrics!**
+- If you need to divide a sum by something, first create a metric with SUM(), then reference it
+- Correct pattern:
+  1. Metric 1: `"formula": "SUM(amount)"` → creates `total_raised`
+  2. Metric 2: `"formula": "total_raised / goal * 100"` → references `total_raised`
+- WRONG pattern: `"formula": "SUM(amount) / goal * 100"` ❌ (can't nest SUM)
 
 ---
 
@@ -73,7 +91,7 @@ Output:
     },
     {
       "name": "progress_pct",
-      "formula": "(SUM(amount) / goal) * 100",
+      "formula": "total_raised / goal * 100",
       "group_by": "initiative_id",
       "format": "percent"
     }
@@ -128,3 +146,38 @@ Output:
   ],
   "notifications": []
 }
+
+Request: "Show average gift size and total raised per initiative"
+Output:
+{
+  "template": "analysis",
+  "sources": [
+    {"entity_type": "gifts"},
+    {"entity_type": "groups", "subtype": "initiative"}
+  ],
+  "join_on": "initiative_id",
+  "metrics": [
+    {
+      "name": "total_raised",
+      "formula": "SUM(amount)",
+      "group_by": "initiative_id",
+      "format": "currency"
+    },
+    {
+      "name": "gift_count",
+      "formula": "COUNT(*)",
+      "group_by": "initiative_id",
+      "format": "number"
+    },
+    {
+      "name": "avg_gift_size",
+      "formula": "total_raised / gift_count",
+      "group_by": "initiative_id",
+      "format": "currency"
+    }
+  ],
+  "flags": [],
+  "notifications": []
+}
+
+NOTE: In the last example, `avg_gift_size` references `total_raised` and `gift_count` - it does NOT use `SUM(amount) / COUNT(*)` because that would nest aggregations!

@@ -21,7 +21,7 @@ import pandas as pd
 
 def _serialize_preview(preview: Dict[str, Any]) -> Dict[str, Any]:
     """Convert non-JSON-serializable objects (UUID, Timestamp) to strings"""
-    
+
     def convert_value(v):
         if isinstance(v, UUID):
             return str(v)
@@ -34,8 +34,19 @@ def _serialize_preview(preview: Dict[str, Any]) -> Dict[str, Any]:
         elif pd.isna(v):  # Handle pandas NaN/NaT
             return None
         return v
-    
+
     return {k: convert_value(v) for k, v in preview.items()}
+
+def _convert_assignments_to_camel_case(assignments: list) -> list:
+    """Convert assignment dicts from snake_case to camelCase for frontend"""
+    def to_camel_case(snake_str):
+        components = snake_str.split('_')
+        return components[0] + ''.join(x.title() for x in components[1:])
+
+    return [
+        {to_camel_case(k): v for k, v in assignment.items()}
+        for assignment in assignments
+    ]
 
 # ============================================================================
 # FIELD MAPPING: SAFETY NET FOR AI
@@ -162,12 +173,15 @@ async def _preview_matching(params: Dict[str, Any]) -> Dict[str, Any]:
     # Calculate preview metrics
     match_rate = len(assignments) / len(source_df) if len(source_df) > 0 else 0
     avg_score = sum(a['match_score'] for a in assignments) / len(assignments) if assignments else 0
-    
+
+    # Convert assignments to camelCase for frontend TypeScript types
+    assignments_camel = _convert_assignments_to_camel_case(assignments)
+
     return _serialize_preview({
         "proposed_assignments": len(assignments),
         "match_rate": round(match_rate, 2),
         "avg_match_score": round(avg_score, 2),
-        "assignments_preview": assignments[:10],  # First 10 for UI
+        "assignments_preview": assignments_camel[:10],  # First 10 for UI
         "source_count": len(source_df),
         "target_count": len(target_df),
         "notifications_planned": len(assignments) * len(params_model.notifications)
@@ -218,20 +232,38 @@ async def _preview_analysis(params: Dict[str, Any]) -> Dict[str, Any]:
 
     # Handle joins if multiple sources specified
     if len(params_model.sources) > 1 and params_model.join_on:
-        second_source = params_model.sources[1]
+        # Find the source to join with (not the first source)
+        # If join_on is "initiative_id", we want entity_type="groups" with subtype="initiative"
+        # If join_on is "donor_id", we want entity_type="people" with subtype="donor"
+        join_source = None
+        for source in params_model.sources[1:]:  # Skip first source
+            # Check if this source's subtype matches the join_on pattern
+            if params_model.join_on and source.subtype:
+                # Extract base name from join_on (e.g., "initiative" from "initiative_id")
+                join_base = params_model.join_on.replace('_id', '')
+                if source.subtype == join_base:
+                    join_source = source
+                    break
+
+        # Fallback: use second source if no match found
+        if not join_source:
+            join_source = params_model.sources[1]
+
         join_df = await load_data(
-            EntityType(second_source.entity_type),
-            second_source.subtype
+            EntityType(join_source.entity_type),
+            join_source.subtype
         )
-        print(f"🔍 DEBUG: Loaded {len(join_df)} {second_source.entity_type} for join")
+        print(f"🔍 DEBUG: Loaded {len(join_df)} {join_source.entity_type} for join")
 
         # Perform join (left join to keep all records from first source)
-        # Map initiative_id → name from groups table
-        if 'id' in join_df.columns and 'name' in join_df.columns:
-            # Create a mapping dict: UUID → name
-            id_to_name = dict(zip(join_df['id'].astype(str), join_df['name']))
-            # Add a new column with the initiative name
-            if params_model.join_on in df.columns:
+        # Map initiative_id → name and other columns from groups table
+        if 'id' in join_df.columns and params_model.join_on in df.columns:
+            # Create mapping dicts for each column in the join table
+            id_str = join_df['id'].astype(str)
+
+            # Map name
+            if 'name' in join_df.columns:
+                id_to_name = dict(zip(id_str, join_df['name']))
                 df['initiative_name'] = df[params_model.join_on].astype(str).map(id_to_name)
                 print(f"🔍 DEBUG: Mapped {df['initiative_name'].notna().sum()} initiative names")
 
@@ -239,6 +271,18 @@ async def _preview_analysis(params: Dict[str, Any]) -> Dict[str, Any]:
                 for metric in params_model.metrics:
                     if metric.group_by == params_model.join_on:
                         metric.group_by = 'initiative_name'
+
+            # Map goal (needed for progress_pct calculations)
+            if 'goal' in join_df.columns:
+                id_to_goal = dict(zip(id_str, join_df['goal']))
+                df['goal'] = df[params_model.join_on].astype(str).map(id_to_goal)
+                print(f"🔍 DEBUG: Mapped {df['goal'].notna().sum()} initiative goals")
+
+            # Map capacity (if present)
+            if 'capacity' in join_df.columns:
+                id_to_capacity = dict(zip(id_str, join_df['capacity']))
+                df['capacity'] = df[params_model.join_on].astype(str).map(id_to_capacity)
+                print(f"🔍 DEBUG: Mapped {df['capacity'].notna().sum()} capacities")
 
     # Apply filters if present
     if first_source.filters:
@@ -479,19 +523,34 @@ async def execute_analysis(params: Dict[str, Any], workflow_run_id: str) -> Dict
 
     # Handle joins if multiple sources specified
     if len(params_model.sources) > 1 and params_model.join_on:
-        second_source = params_model.sources[1]
-        join_df = await load_data(
-            EntityType(second_source.entity_type),
-            second_source.subtype
-        )
-        print(f"📊 Analysis: Loaded {len(join_df)} {second_source.entity_type} for join")
+        # Find the source to join with (not the first source)
+        join_source = None
+        for source in params_model.sources[1:]:  # Skip first source
+            if params_model.join_on and source.subtype:
+                # Extract base name from join_on (e.g., "initiative" from "initiative_id")
+                join_base = params_model.join_on.replace('_id', '')
+                if source.subtype == join_base:
+                    join_source = source
+                    break
 
-        # Perform join - map initiative_id → name from groups table
-        if 'id' in join_df.columns and 'name' in join_df.columns:
-            # Create a mapping dict: UUID → name
-            id_to_name = dict(zip(join_df['id'].astype(str), join_df['name']))
-            # Add a new column with the initiative name
-            if params_model.join_on in df.columns:
+        # Fallback: use second source if no match found
+        if not join_source:
+            join_source = params_model.sources[1]
+
+        join_df = await load_data(
+            EntityType(join_source.entity_type),
+            join_source.subtype
+        )
+        print(f"📊 Analysis: Loaded {len(join_df)} {join_source.entity_type} for join")
+
+        # Perform join - map initiative_id → name and other columns from groups table
+        if 'id' in join_df.columns and params_model.join_on in df.columns:
+            # Create mapping dicts for each column in the join table
+            id_str = join_df['id'].astype(str)
+
+            # Map name
+            if 'name' in join_df.columns:
+                id_to_name = dict(zip(id_str, join_df['name']))
                 df['initiative_name'] = df[params_model.join_on].astype(str).map(id_to_name)
                 print(f"📊 Analysis: Mapped {df['initiative_name'].notna().sum()} initiative names")
 
@@ -499,6 +558,18 @@ async def execute_analysis(params: Dict[str, Any], workflow_run_id: str) -> Dict
                 for metric in params_model.metrics:
                     if metric.group_by == params_model.join_on:
                         metric.group_by = 'initiative_name'
+
+            # Map goal (needed for progress_pct calculations)
+            if 'goal' in join_df.columns:
+                id_to_goal = dict(zip(id_str, join_df['goal']))
+                df['goal'] = df[params_model.join_on].astype(str).map(id_to_goal)
+                print(f"📊 Analysis: Mapped {df['goal'].notna().sum()} initiative goals")
+
+            # Map capacity (if present)
+            if 'capacity' in join_df.columns:
+                id_to_capacity = dict(zip(id_str, join_df['capacity']))
+                df['capacity'] = df[params_model.join_on].astype(str).map(id_to_capacity)
+                print(f"📊 Analysis: Mapped {df['capacity'].notna().sum()} capacities")
 
     # Apply filters if present
     if first_source.filters:

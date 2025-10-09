@@ -138,9 +138,15 @@ async def get_approvals(status: Optional[str] = None):
 async def get_approval(approval_id: str):
     """
     Get approval gate details for frontend approval UI.
+    Includes extracted_params from workflow_run.
     """
     approval = await fetch_one(
-        "SELECT * FROM approval_gates WHERE id = $1",
+        """
+        SELECT ag.*, wr.template_type, wr.request_text, wr.extracted_params
+        FROM approval_gates ag
+        JOIN workflow_runs wr ON ag.workflow_run_id = wr.id
+        WHERE ag.id = $1
+        """,
         approval_id
     )
 
