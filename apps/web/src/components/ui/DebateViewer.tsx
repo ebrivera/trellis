@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Card } from './Card'
 import { Badge } from './Badge'
+import { DebateMessageModal } from './DebateMessageModal'
 import type { AgentName, DebateMessage } from '@trellis/types'
 
 const AGENT_CONFIGS: Record<AgentName, {
@@ -58,7 +59,7 @@ interface DebateViewerProps {
 export function DebateViewer({ messages, currentRound, winner, voteTally }: DebateViewerProps) {
     const agents: AgentName[] = ['Planner', 'Operations', 'HumanFlourishing']
     const [selectedRound, setSelectedRound] = useState<1 | 2 | 3>(currentRound)
-    const [expandedAgent, setExpandedAgent] = useState<AgentName | null>(null)
+    const [modalMessage, setModalMessage] = useState<{ agent: AgentName; message: DebateMessage } | null>(null)
     const prevCurrentRound = useRef(currentRound)
 
     // Update selected round when current round changes (but only forward, not backward)
@@ -125,11 +126,10 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
                             <div className="flex-1">
                                 {hasMessages ? (
                                     roundMessages.map((msg, idx) => {
-                                        const isExpanded = expandedAgent === agent
                                         const isTruncated = msg.content.length > 200
-                                        const displayContent = isExpanded || !isTruncated 
-                                            ? msg.content 
-                                            : `${msg.content.slice(0, 200)}...`
+                                        const displayContent = isTruncated 
+                                            ? `${msg.content.slice(0, 200)}...`
+                                            : msg.content
 
                                         return (
                                             <div 
@@ -144,10 +144,10 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
                                                 </p>
                                                 {isTruncated && (
                                                     <button
-                                                        onClick={() => setExpandedAgent(isExpanded ? null : agent)}
+                                                        onClick={() => setModalMessage({ agent, message: msg })}
                                                         className="mt-2 text-xs text-blue-400 hover:text-blue-300"
                                                     >
-                                                        {isExpanded ? '− Show less' : '+ Show more'}
+                                                        + Show more
                                                     </button>
                                                 )}
                                             </div>
@@ -208,6 +208,16 @@ export function DebateViewer({ messages, currentRound, winner, voteTally }: Deba
                     })}
                 </div>
             </div>
+
+            {/* Modal for full message content */}
+            {modalMessage && (
+                <DebateMessageModal
+                    isOpen={!!modalMessage}
+                    onClose={() => setModalMessage(null)}
+                    agent={modalMessage.agent}
+                    message={modalMessage.message}
+                />
+            )}
         </Card>
     )
 }
