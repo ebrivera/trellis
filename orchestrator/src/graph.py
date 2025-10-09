@@ -148,6 +148,46 @@ async def create_approval_gate_node(state: Dict[str, Any]) -> Dict[str, Any]:
     return state
 
 # ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+def reformat_veto_message(winning_strategy: str) -> str:
+    """
+    Convert agent's technical veto message into natural, church-appropriate language.
+
+    Removes technical jargon like "ABSOLUTE VETO", "Dim 1", etc.
+    Extracts the core concern and reformats in a pastoral tone.
+    """
+    import re
+
+    # Remove "I invoke ABSOLUTE VETO." prefix
+    strategy = re.sub(r'^I invoke ABSOLUTE VETO\.\s*', '', winning_strategy, flags=re.IGNORECASE)
+
+    # Remove dimensional references like "(Dim 1)", "(Dim 7)", etc.
+    strategy = re.sub(r'\(Dim\s+\d+\)', '', strategy)
+
+    # Remove "by using" or similar connector phrases that make it sound like a list
+    strategy = re.sub(r'\s+by (using|promoting|creating)\s+', ', which would ', strategy)
+
+    # Clean up extra whitespace
+    strategy = re.sub(r'\s+', ' ', strategy).strip()
+
+    # Add a more pastoral opening if the message is about relationships/ethics
+    if any(keyword in strategy.lower() for keyword in ['violates', 'transactional', 'pressure', 'judgment']):
+        # Extract the core concern (usually the first sentence or clause)
+        first_sentence = strategy.split('.')[0] if '.' in strategy else strategy
+        rest = '.'.join(strategy.split('.')[1:]).strip() if '.' in strategy else ''
+
+        # Reconstruct with gentler framing
+        if rest:
+            return f"After careful consideration, we have some concerns about this approach.\n\n{first_sentence}. {rest}\n\nLet's explore a different approach that better aligns with our values of authentic relationships and genuine care for people."
+        else:
+            return f"After careful consideration, we have some concerns about this approach.\n\n{first_sentence}.\n\nLet's explore a different approach that better aligns with our values of authentic relationships and genuine care for people."
+
+    return strategy
+
+
+# ============================================================================
 # CONDITIONAL ROUTING FUNCTIONS
 # ============================================================================
 
@@ -201,12 +241,15 @@ def should_continue_after_veto(state: Dict[str, Any]) -> str:
     winning_strategy = debate_state.get('winning_strategy', '')
     veto_type = debate_state.get('veto_type')
 
+    # Reformat the technical veto message into natural language
+    natural_message = reformat_veto_message(winning_strategy)
+
     if veto_type == 'total_rejection':
         # Entire request is unethical
         state['clarifications'] = [
-            f"⚠️ **Ethical Concerns Raised by {winning_agent}**\n\n"
-            f"{winning_strategy}\n\n"
-            "**This request cannot be executed as stated.** Please rephrase your request to align with these principles, or provide more context."
+            f"💜 We'd Like to Suggest a Different Approach\n\n"
+            f"{natural_message}\n\n"
+            "What would you like to do? Feel free to rephrase your request, or let us know more about what you're hoping to accomplish."
         ]
 
         print("\n" + "="*80)
@@ -219,11 +262,9 @@ def should_continue_after_veto(state: Dict[str, Any]) -> str:
     elif veto_type == 'partial_rejection':
         # Specific filters are unethical, but core request is okay
         state['clarifications'] = [
-            f"⚠️ **Ethical Concerns Raised by {winning_agent}**\n\n"
-            f"{winning_strategy}\n\n"
-            f"**Alternative Approach:** {winning_agent} suggests removing the problematic filters while preserving the core intent of your request.\n\n"
-            "**Does this alternative approach achieve your goal?** If so, please rephrase your request without the flagged filters. "
-            "If not, please provide more context about what you're trying to accomplish."
+            f"💜 We'd Like to Suggest a Different Approach\n\n"
+            f"{natural_message}\n\n"
+            "What would you like to do? If this alternative sounds good, please rephrase your request. Or, let us know more about what you're hoping to accomplish and we can explore other options together."
         ]
 
         print("\n" + "="*80)

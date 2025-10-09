@@ -143,26 +143,45 @@ async def run_orchestration_with_events(
 
                 # If ANY veto detected, emit appropriate event (graph will halt after this)
                 if veto_override:
-                    clarifications = state.get('clarifications', [])
+                    # Import the reformatter function
+                    from .graph import reformat_veto_message
+
+                    winning_strategy = debate_state.get('winning_strategy', '')
+                    winning_agent = debate_state.get('winning_agent', 'HumanFlourishing')
+
+                    # Reformat the technical veto message into natural language
+                    natural_message = reformat_veto_message(winning_strategy)
 
                     if veto_type == 'total_rejection':
                         # Entire request is unethical
+                        formatted_message = (
+                            f"💜 We'd Like to Suggest a Different Approach\n\n"
+                            f"{natural_message}\n\n"
+                            "What would you like to do? Feel free to rephrase your request, or let us know more about what you're hoping to accomplish."
+                        )
+
                         await event_queue.put({
                             'event': 'ethical_veto_total_rejection',
                             'data': {
-                                'agent': debate_state.get('winning_agent'),
-                                'concerns': clarifications[0] if clarifications else debate_state.get('winning_strategy', ''),
+                                'agent': winning_agent,
+                                'concerns': formatted_message,
                                 'message': 'This request violates ethical principles and cannot be executed. Please rephrase your request.'
                             }
                         })
 
                     elif veto_type == 'partial_rejection':
                         # Specific filters are unethical, core request is okay
+                        formatted_message = (
+                            f"💜 We'd Like to Suggest a Different Approach\n\n"
+                            f"{natural_message}\n\n"
+                            "What would you like to do? If this alternative sounds good, please rephrase your request. Or, let us know more about what you're hoping to accomplish and we can explore other options together."
+                        )
+
                         await event_queue.put({
                             'event': 'ethical_veto_partial_rejection',
                             'data': {
-                                'agent': debate_state.get('winning_agent'),
-                                'concerns': clarifications[0] if clarifications else debate_state.get('winning_strategy', ''),
+                                'agent': winning_agent,
+                                'concerns': formatted_message,
                                 'alternativeApproach': debate_state.get('winning_strategy', ''),
                                 'message': 'This request contains problematic filters. An alternative approach has been suggested.'
                             }

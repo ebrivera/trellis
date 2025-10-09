@@ -153,7 +153,7 @@ export default function GoalsPage() {
                 const clarificationMessage: Message = {
                     id: Date.now().toString(),
                     role: 'system',
-                    content: `I need some clarification before proceeding:\n\n**${data.question}**\n\nPlease provide more details so I can create the best plan for you.`
+                    content: `I need some clarification before proceeding:\n\n${data.question}\n\nPlease provide more details so I can create the best plan for you.`
                 }
                 setMessages(prev => [...prev, clarificationMessage])
                 setIsProcessing(false)
@@ -271,10 +271,11 @@ export default function GoalsPage() {
                 setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
 
                 // Add ethical concerns message
+                // The backend already formatted this message nicely, just display it
                 const ethicalMessage: Message = {
                     id: Date.now().toString(),
                     role: 'system',
-                    content: `⚠️ **Ethical Concerns Raised**\n\n${data.agent} identified serious ethical issues with your request:\n\n${data.concerns}\n\nPlease rephrase your request to align with these principles, or provide more context.`
+                    content: data.concerns
                 }
                 setMessages(prev => [...prev, ethicalMessage])
                 setIsProcessing(false)
@@ -291,6 +292,7 @@ export default function GoalsPage() {
                 setMessages(prev => prev.filter(m => m.id !== analyzingMessage.id))
 
                 // Add alternative approach message
+                // The backend already formatted this message nicely, just display it
                 const alternativeMessage: Message = {
                     id: Date.now().toString(),
                     role: 'system',
